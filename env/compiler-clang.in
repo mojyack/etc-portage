@@ -4,11 +4,11 @@ AR="llvm-ar"
 NM="llvm-nm"
 RANLIB="llvm-ranlib"
 
-COMMON_FLAGS="-O2 -pipe -march=skylake -mrtm"
+COMMON_FLAGS="-O2 -pipe @C_OPT_FLAGS@"
 CFLAGS="${COMMON_FLAGS}"
 CXXFLAGS="${COMMON_FLAGS} -stdlib=libc++"
 FCFLAGS="${COMMON_FLAGS}"
 FFLAGS="${COMMON_FLAGS}"
-RUSTFLAGS="-C target-cpu=skylake -C target-feature=+rtm"
+RUSTFLAGS="@RUST_OPT_FLAGS@"
 
 LDFLAGS="-fuse-ld=lld -rtlib=compiler-rt -unwindlib=libunwind -Wl,--as-needed"
