@@ -1,0 +1,4 @@
+COMMON_FLAGS="-O2 -pipe -march=skylake -mrtm"
+CFLAGS="${CFLAGS} -flto=thin"
+CXXFLAGS="${CXXFLAGS} -flto=thin"
+RUSTFLAGS="${RUSTFLAGS} -C lto=thin -C opt-level=3"

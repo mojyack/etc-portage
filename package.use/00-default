@@ -1,0 +1,136 @@
+media-video/mpv             -alsa -uchardet -xv -zlib
+app-i18n/fcitx5             -enchant
+app-i18n/fcitx5-gtk         -gtk2 -introspection -snooper
+media-sound/audacity        -portmixer
+gui-apps/wofi               -dmenu -drun
+media-gfx/gimp              -udev
+gui-wm/sway                 -man -swaybar -swayidle -swaynag
+net-fs/samba                -regedit -system-mitkrb5
+sys-libs/talloc             -python
+sys-apps/util-linux         -cramfs -hardlink -logger 
+dev-vcs/git                 -perl -webdav
+app-crypt/gnupg             -smartcard -tofu
+sys-libs/ldb                -lmdb
+sys-apps/systemd            -gcrypt
+sys-apps/portage            -rsync-verify
+
+media-plugins/alsa-plugins  pulseaudio
+media-libs/freetype         harfbuzz
+media-libs/harfbuzz         glib truetype
+dev-lang/rust               rustfmt
+sys-kernel/gentoo-sources   symlink experimental
+media-gfx/imagemagick       jpeg png webp
+media-sound/sox             flac ogg
+x11-terms/alacritty         wayland
+media-fonts/fontawesome     otf
+media-libs/mesa             gallium gles2 vaapi vulkan wayland zstd
+dev-cpp/gtkmm               wayland
+sys-fs/cryptsetup           openssl
+dev-libs/openssl            asm
+dev-libs/libtomcrypt        tomsfastmath
+sys-process/procps          cpp
+sys-apps/net-tools          hostname
+dev-libs/gmp                asm cxx
+net-nds/rpcbind             warmstarts
+dev-libs/elfutils           utils
+dev-vcs/git                 blksha1 curl
+media-libs/libvpx           highbitdepth
+net-fs/nfs-utils            libmount nfsv4
+media-gfx/imagemagick       cxx
+net-libs/nodejs             icu system-icu system-ssl
+x11-libs/libxkbcommon       wayland
+sys-apps/portage            native-extensions
+media-video/ffmpeg          dav1d
+media-libs/libepoxy         egl
+dev-python/msgpack          native-extensions
+media-libs/dav1d            8bit 10bit asm
+app-editors/neovim          tui lto
+net-wireless/iwd            client monitor
+sys-fs/udisks               daemon
+media-libs/freetype         cleartype-hinting
+gui-wm/sway                 swaybg swaylock swaymsg
+media-libs/alsa-lib         thread-safety 
+net-misc/openssh            hpn
+dev-lang/spidermonkey       lto jit
+
+# workaround to "longjmp causes uninitialized stack frame"
+net-misc/curl               adns
+
+# firefox
+www-client/firefox          clang dbus screencast pulseaudio wayland gmp-autoupdate openh264 lto
+www-client/firefox          system-av1 system-harfbuzz system-icu system-jpeg system-libevent system-libvpx system-png system-webp
+media-libs/libpng           apng
+media-libs/libvpx           postproc
+media-libs/libglvnd         X
+x11-libs/gtk+               wayland
+dev-lang/python             sqlite
+media-libs/openh264         plugin
+
+# spidermonkey
+dev-lang/spidermonkey       clang
+
+# gui-apps/wofi
+x11-libs/gtk+               wayland
+
+# fcitx5
+app-i18n/fcitx5             wayland
+app-i18n/fcitx5-gtk         gtk3
+x11-libs/cairo              X
+x11-libs/gtk+               X
+media-libs/libepoxy         X
+media-libs/mesa             X
+gui-apps/wofi               run
+
+# waybar
+gui-apps/waybar             network popups pulseaudio wifi
+dev-libs/libdbusmenu        gtk3
+x11-libs/gtk+               introspection
+dev-libs/atk                introspection
+x11-libs/gdk-pixbuf         introspection
+x11-libs/pango              introspection
+media-libs/harfbuzz         introspection
+
+# swaybg
+x11-libs/gdk-pixbuf         jpeg
+
+# audacity
+media-sound/audacity        id3tag lv2 sbsms twolame vamp vst alsa ffmpeg flac ladspa ogg vorbis
+media-libs/portaudio        alsa
+x11-libs/wxGTK              X
+media-libs/flac             cxx
+sys-libs/llvm-libunwind     static-libs
+
+# gimp
+media-gfx/gimp              heif webp
+app-text/poppler            cairo
+media-libs/gegl             cairo
+media-libs/babl             lcms introspection
+media-libs/gegl             lcms introspection
+
+# tesseract
+app-text/tesseract          jpeg png webp
+app-text/tessdata_fast      osd l10n_zh
+media-libs/leptonica        webp png jpeg
+
+# mpv
+media-video/mpv             cli drm egl opengl iconv lua pulseaudio vaapi wayland
+media-video/ffmpeg          encode vaapi
+x11-libs/libva              drm wayland
+
+# cairo
+media-libs/freetype         png
+
+# gtk+
+x11-libs/cairo              glib svg X
+
+# gnome-base/librsvg
+x11-libs/cairo              glib
+
+# dev-python/setuptools
+dev-lang/python             xml
+
+# dev-cpp/gtkmm
+x11-libs/gtk+               wayland
+
+# gui-libs/gtk-layer-shell
+x11-libs/gtk+               introspection wayland

@@ -1,0 +1,10 @@
+MAKEOPTS="-j@CORES@"
+FEATURES="nodoc noinfo noman parallel-fetch parallel-install"
+
+ACCEPT_KEYWORDS="~amd64"
+ACCEPT_LICENSE="*"
+
+GENTOO_MIRRORS="rsync://ftp.iij.ad.jp/pub/linux/gentoo/ http://ftp.iij.ad.jp/pub/linux/gentoo/ ftp://ftp.iij.ad.jp/pub/linux/gentoo/ https://ftp.jaist.ac.jp/pub/Linux/Gentoo/ http://ftp.jaist.ac.jp/pub/Linux/Gentoo/ ftp://ftp.jaist.ac.jp/pub/Linux/Gentoo/ rsync://ftp.jaist.ac.jp/pub/Linux/Gentoo/ https://ftp.riken.jp/Linux/gentoo/ http://ftp.riken.jp/Linux/gentoo/ rsync://ftp.riken.jp/gentoo/"
+
+CPU_FLAGS_X86=@CPU_FLAGS@
+VIDEO_CARDS=@VIDEO_CARDS@

@@ -1,0 +1,14 @@
+CC="gcc"
+CXX="g++"
+AR="ar"
+NM="nm"
+RANLIB="ranlib"
+
+COMMON_FLAGS="-O2 -pipe -march=skylake -mabm -mrtm"
+CFLAGS="${COMMON_FLAGS}"
+CXXFLAGS="${COMMON_FLAGS}"
+FCFLAGS="${COMMON_FLAGS}"
+FFLAGS="${COMMON_FLAGS}"
+RUSTFLAGS="-C target-cpu=skylake -C target-feature=+rtm"
+
+LDFLAGS=""

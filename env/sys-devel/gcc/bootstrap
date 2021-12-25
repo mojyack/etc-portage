@@ -1,0 +1,2 @@
+EXTRA_ECONF="--disable-bootstrap"
+GCC_MAKE_TARGET="all"

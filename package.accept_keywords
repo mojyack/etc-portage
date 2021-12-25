@@ -1,0 +1,5 @@
+dev-lang/python         -~amd64
+sys-apps/systemd        -~amd64
+
+<media-gfx/gimp-9999    **
+
