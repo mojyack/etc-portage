@@ -13,6 +13,8 @@ app-crypt/gnupg             -smartcard -tofu
 sys-libs/ldb                -lmdb
 sys-apps/systemd            -gcrypt
 sys-apps/portage            -rsync-verify
+media-sound/pulseaudio      -alsa -alsa-plugin -asyncns -daemon -glib -ipv6 -orc -ssl -systemd -udev -webrtc-aec
+sys-fs/lvm2                 -readline -systemd -thin -udev
 
 media-plugins/alsa-plugins  pulseaudio
 media-libs/freetype         harfbuzz
