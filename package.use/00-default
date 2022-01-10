@@ -54,6 +54,7 @@ gui-wm/sway                 swaybg swaylock swaymsg
 media-libs/alsa-lib         thread-safety 
 net-misc/openssh            hpn
 dev-lang/spidermonkey       lto jit
+dev-lang/python             lto
 
 # workaround to "longjmp causes uninitialized stack frame"
 net-misc/curl               adns
