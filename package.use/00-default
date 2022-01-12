@@ -46,21 +46,20 @@ media-video/ffmpeg          dav1d
 media-libs/libepoxy         egl
 dev-python/msgpack          native-extensions
 media-libs/dav1d            8bit 10bit asm
-app-editors/neovim          tui lto
+app-editors/neovim          tui
 net-wireless/iwd            client monitor
 sys-fs/udisks               daemon
 media-libs/freetype         cleartype-hinting
 gui-wm/sway                 swaybg swaylock swaymsg
 media-libs/alsa-lib         thread-safety 
 net-misc/openssh            hpn
-dev-lang/spidermonkey       lto jit
-dev-lang/python             lto
+dev-lang/spidermonkey       jit
 
 # workaround to "longjmp causes uninitialized stack frame"
 net-misc/curl               adns
 
 # firefox
-www-client/firefox          clang dbus screencast pulseaudio wayland gmp-autoupdate openh264 lto
+www-client/firefox          clang dbus screencast pulseaudio wayland gmp-autoupdate openh264
 www-client/firefox          system-av1 system-harfbuzz system-icu system-jpeg system-libevent system-libvpx system-png system-webp
 media-libs/libpng           apng
 media-libs/libvpx           postproc
