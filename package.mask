@@ -5,3 +5,7 @@ sys-libs/libunwind
 
 # 2021-12-20
 =app-accessibility/at-spi2-core-2.42.0
+
+# 2020-01-13
+# Firefox 96 requires libXtst but wayland system doesn't have it
+=www-client/firefox-96.0
