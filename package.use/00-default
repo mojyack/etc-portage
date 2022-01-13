@@ -59,14 +59,7 @@ dev-lang/spidermonkey       jit
 net-misc/curl               adns
 
 # firefox
-www-client/firefox          clang dbus screencast pulseaudio wayland gmp-autoupdate openh264
-www-client/firefox          system-av1 system-harfbuzz system-icu system-jpeg system-libevent system-libvpx system-png system-webp
-media-libs/libpng           apng
-media-libs/libvpx           postproc
-media-libs/libglvnd         X
-x11-libs/gtk+               wayland
-dev-lang/python             sqlite
-media-libs/openh264         plugin
+www-client/firefox-bin      -alsa -selinux
 
 # spidermonkey
 dev-lang/spidermonkey       clang
