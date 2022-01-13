@@ -21,6 +21,7 @@ media-fonts/fontawesome
 media-fonts/noto-cjk
 media-fonts/noto-emoji
 media-sound/pulsemixer
+media-video/pipewire
 net-analyzer/iftop
 sys-apps/kexec-tools
 sys-apps/pciutils
