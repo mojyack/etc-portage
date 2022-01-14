@@ -48,7 +48,6 @@ dev-python/msgpack          native-extensions
 media-libs/dav1d            8bit 10bit asm
 app-editors/neovim          tui
 net-wireless/iwd            client monitor
-sys-fs/udisks               daemon
 media-libs/freetype         cleartype-hinting
 gui-wm/sway                 swaybg swaylock swaymsg
 media-libs/alsa-lib         thread-safety 
