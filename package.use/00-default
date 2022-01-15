@@ -53,6 +53,7 @@ gui-wm/sway                 swaybg swaylock swaymsg
 media-libs/alsa-lib         thread-safety 
 net-misc/openssh            hpn
 dev-lang/spidermonkey       jit
+dev-lang/perl               minimal
 
 # workaround to "longjmp causes uninitialized stack frame"
 net-misc/curl               adns
