@@ -19,7 +19,6 @@ sys-fs/lvm2                 -readline -systemd -thin -udev
 media-plugins/alsa-plugins  pulseaudio
 media-libs/freetype         harfbuzz
 media-libs/harfbuzz         glib truetype
-virtual/rust                rustfmt
 sys-kernel/gentoo-sources   symlink experimental
 media-gfx/imagemagick       jpeg png webp
 media-sound/sox             flac ogg
@@ -134,3 +133,7 @@ x11-libs/gtk+               wayland
 
 # gui-libs/gtk-layer-shell
 x11-libs/gtk+               introspection wayland
+
+# rust
+virtual/rust                rustfmt
+dev-lang/rust-bin           rustfmr
