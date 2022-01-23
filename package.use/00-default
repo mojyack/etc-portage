@@ -136,4 +136,4 @@ x11-libs/gtk+               introspection wayland
 
 # rust
 virtual/rust                rustfmt
-dev-lang/rust-bin           rustfmr
+dev-lang/rust-bin           rustfmt
