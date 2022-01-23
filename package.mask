@@ -1,4 +1,5 @@
 sys-libs/libunwind
+dev-lang/rust
 
 # 2021-12-18
 =app-text/poppler-21.12.0

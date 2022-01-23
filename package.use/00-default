@@ -19,7 +19,7 @@ sys-fs/lvm2                 -readline -systemd -thin -udev
 media-plugins/alsa-plugins  pulseaudio
 media-libs/freetype         harfbuzz
 media-libs/harfbuzz         glib truetype
-dev-lang/rust               rustfmt
+virtual/rust                rustfmt
 sys-kernel/gentoo-sources   symlink experimental
 media-gfx/imagemagick       jpeg png webp
 media-sound/sox             flac ogg
@@ -86,8 +86,9 @@ media-libs/harfbuzz         introspection
 
 # sway
 gui-wm/sway                 swaybg swaylock swaymsg
-gui-libs/wlroots            vulkan
-media-libs/vulkan-loader    wayland
+## for vulkan renderer
+#gui-libs/wlroots            vulkan
+#media-libs/vulkan-loader    wayland
 
 # swaybg
 x11-libs/gdk-pixbuf         jpeg
