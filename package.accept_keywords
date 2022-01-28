@@ -3,5 +3,6 @@ sys-apps/systemd        -~amd64
 x11-terms/alacritty     -~amd64
 sys-libs/efivar         -~amd64
 sys-devel/gcc           -~amd64
+net-fs/samba            -~amd64
 
 <media-gfx/gimp-9999    **
