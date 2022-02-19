@@ -1,0 +1,2 @@
+CFLAGS="${CFLAGS} --tag=CC"
+CXXFLAGS="${CXXFLAGS} --tag=CXX"
