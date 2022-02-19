@@ -16,6 +16,7 @@ sys-apps/portage            -rsync-verify
 media-sound/pulseaudio      -alsa -alsa-plugin -asyncns -daemon -glib -ipv6 -orc -ssl -systemd -udev -webrtc-aec
 sys-fs/lvm2                 -readline -systemd -thin -udev
 sys-devel/gcc               -lto -pgo
+sys-auth/pambase            -passwdqc
 
 media-plugins/alsa-plugins  pulseaudio
 media-libs/freetype         harfbuzz
