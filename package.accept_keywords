@@ -1,20 +1,24 @@
-dev-lang/python         -~amd64
-sys-apps/systemd        -~amd64
-x11-terms/alacritty     -~amd64
-sys-libs/efivar         -~amd64
-sys-devel/gcc           -~amd64
-net-fs/samba            -~amd64
-gui-apps/grim           -~amd64
+app-crypt/fcrackzip     ~amd64
+gui-apps/slurp          ~amd64
+gui-apps/wofi           ~amd64
+sys-libs/glibc          ~amd64
+app-i18n/fcitx5         ~amd64
+app-i18n/fcitx5-gtk     ~amd64
+app-misc/brightnessctl  ~amd64
+sys-kernel/gentoo-sources ~amd64
 
-dev-util/lldb           -~amd64
-sys-devel/clang         -~amd64
-sys-devel/clang-common  -~amd64
-sys-devel/lld           -~amd64
-sys-devel/llvm          -~amd64
-sys-devel/llvm-common   -~amd64
-sys-libs/compiler-rt    -~amd64
-sys-libs/libcxx         -~amd64
-sys-libs/libcxxabi      -~amd64
-sys-libs/llvm-libunwind -~amd64
+# gui-apps/waybar
+gui-apps/waybar         ~amd64
+dev-libs/date           ~amd64
+dev-libs/libfmt         ~amd64
+dev-libs/spdlog         ~amd64
+gui-libs/gtk-layer-shell ~amd64
 
-<media-gfx/gimp-9999    **
+# media-video/pipewire
+media-video/pipewire    ~amd64
+media-video/wireplumber ~amd64
+
+# media-gfx/gimp
+media-gfx/gimp          **
+media-libs/babl         ~amd64
+media-libs/gegl         ~amd64
