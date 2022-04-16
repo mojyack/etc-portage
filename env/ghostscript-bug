@@ -1,0 +1,2 @@
+CFLAGS="${CFLAGS} -stdlib=libc++"
+LDFLAGS="${LDFLAGS} -lc++"
