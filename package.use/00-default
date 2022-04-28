@@ -18,6 +18,9 @@ sys-fs/lvm2                 -readline -systemd -thin -udev
 sys-devel/gcc               -lto -pgo
 sys-auth/pambase            -passwdqc
 sys-libs/compiler-rt-sanitizers -asan -cfi -dfsan -gwp-asan -hwasan -libfuzzer -lsan -memprof -msan -orc -safestack -scudo -tsan -ubsan -xray
+net-libs/glib-networking    -gnome
+media-libs/libaom           -examples
+sys-apps/debianutils        -installkernel
 
 media-plugins/alsa-plugins  pulseaudio
 media-libs/freetype         harfbuzz

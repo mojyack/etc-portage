@@ -22,3 +22,4 @@ media-video/wireplumber ~amd64
 media-gfx/gimp          **
 media-libs/babl         ~amd64
 media-libs/gegl         ~amd64
+media-libs/gexiv2       ~amd64
