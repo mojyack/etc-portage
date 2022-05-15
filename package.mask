@@ -1,2 +1,5 @@
 sys-libs/libunwind
 dev-lang/rust
+
+# 2022-05-15 "no member named '_V2' in namespace 'std::chrono"
+=gui-apps/waybar-0.9.12
