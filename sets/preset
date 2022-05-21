@@ -26,6 +26,5 @@ net-analyzer/iftop
 sys-apps/kexec-tools
 sys-apps/pciutils
 sys-apps/usbutils
-sys-kernel/gentoo-sources
 www-client/firefox-bin
 x11-themes/gnome-themes-standard
