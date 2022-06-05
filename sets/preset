@@ -1,7 +1,7 @@
 app-admin/doas
 app-editors/neovim
-app-i18n/fcitx5
-app-i18n/fcitx5-gtk
+app-i18n/fcitx
+app-i18n/fcitx-gtk
 app-i18n/fcitx5-mikan
 app-misc/ranger
 app-misc/tmux

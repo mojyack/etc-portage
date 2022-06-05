@@ -2,8 +2,8 @@ app-crypt/fcrackzip     ~amd64
 gui-apps/slurp          ~amd64
 gui-apps/wofi           ~amd64
 sys-libs/glibc          ~amd64
-app-i18n/fcitx5         ~amd64
-app-i18n/fcitx5-gtk     ~amd64
+app-i18n/fcitx          ~amd64
+app-i18n/fcitx-gtk      ~amd64
 app-misc/brightnessctl  ~amd64
 sys-kernel/gentoo-sources ~amd64
 

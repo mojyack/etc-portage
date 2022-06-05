@@ -1,6 +1,6 @@
 media-video/mpv             -alsa -uchardet -xv -zlib
-app-i18n/fcitx5             -enchant
-app-i18n/fcitx5-gtk         -gtk2 -introspection -snooper
+app-i18n/fcitx              -enchant
+app-i18n/fcitx-gtk          -gtk2 -introspection -snooper
 media-sound/audacity        -portmixer
 gui-apps/wofi               -dmenu -drun
 media-gfx/gimp              -udev
@@ -72,8 +72,8 @@ dev-lang/spidermonkey       clang
 x11-libs/gtk+               wayland
 
 # fcitx5
-app-i18n/fcitx5             wayland
-app-i18n/fcitx5-gtk         gtk3
+app-i18n/fcitx              wayland
+app-i18n/fcitx-gtk          gtk3
 x11-libs/cairo              X
 x11-libs/gtk+               X
 media-libs/libepoxy         X
