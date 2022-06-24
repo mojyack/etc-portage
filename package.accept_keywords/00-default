@@ -19,7 +19,7 @@ media-video/pipewire    ~amd64
 media-video/wireplumber ~amd64
 
 # media-gfx/gimp
-media-gfx/gimp          **
+=media-gfx/gimp-2.99*   **
 media-libs/babl         ~amd64
 media-libs/gegl         ~amd64
 media-libs/gexiv2       ~amd64
