@@ -21,6 +21,7 @@ sys-libs/compiler-rt-sanitizers -asan -cfi -dfsan -gwp-asan -hwasan -libfuzzer -
 net-libs/glib-networking    -gnome
 media-libs/libaom           -examples
 sys-apps/debianutils        -installkernel
+media-sound/pulseaudio      -daemon
 
 media-plugins/alsa-plugins  pulseaudio
 media-libs/freetype         harfbuzz
@@ -58,6 +59,7 @@ media-libs/alsa-lib         thread-safety
 net-misc/openssh            hpn
 dev-lang/spidermonkey       jit
 dev-lang/perl               minimal
+media-video/pipewire        sound-server
 
 # workaround to "longjmp causes uninitialized stack frame"
 net-misc/curl               adns
