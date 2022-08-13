@@ -4,7 +4,7 @@ app-i18n/fcitx-gtk          -gtk2 -introspection -snooper
 media-sound/audacity        -portmixer
 gui-apps/wofi               -dmenu -drun
 media-gfx/gimp              -udev
-gui-wm/sway                 -man -swaybar -swayidle -swaynag
+gui-wm/sway                 -man -swaybar -swaynag
 net-fs/samba                -regedit -system-mitkrb5
 sys-libs/talloc             -python
 sys-apps/util-linux         -cramfs -hardlink -logger 
