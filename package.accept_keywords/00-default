@@ -6,6 +6,7 @@ app-i18n/fcitx          ~amd64
 app-i18n/fcitx-gtk      ~amd64
 app-misc/brightnessctl  ~amd64
 gui-wm/sway             ~amd64
+gui-libs/wlroots        ~amd64
 sys-kernel/gentoo-sources ~amd64
 
 # gui-apps/waybar
