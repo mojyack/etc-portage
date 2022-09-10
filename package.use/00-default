@@ -75,7 +75,7 @@ x11-libs/gtk+               wayland
 
 # fcitx5
 app-i18n/fcitx              wayland
-app-i18n/fcitx-gtk          gtk3
+app-i18n/fcitx-gtk          wayland gtk3
 x11-libs/cairo              X
 x11-libs/gtk+               X
 media-libs/libepoxy         X
