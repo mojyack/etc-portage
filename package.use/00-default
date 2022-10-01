@@ -1,6 +1,6 @@
 media-video/mpv             -alsa -uchardet -xv -zlib
-app-i18n/fcitx              -enchant
-app-i18n/fcitx-gtk          -gtk2 -introspection -snooper
+app-i18n/fcitx              -enchant -emoji
+app-i18n/fcitx-gtk          -gtk2 -gtk4 -introspection -snooper
 media-sound/audacity        -portmixer
 gui-apps/wofi               -dmenu -drun
 media-gfx/gimp              -udev
@@ -76,8 +76,6 @@ x11-libs/gtk+               wayland
 # fcitx5
 app-i18n/fcitx              wayland
 app-i18n/fcitx-gtk          wayland gtk3
-x11-libs/cairo              X
-x11-libs/gtk+               X
 media-libs/libepoxy         X
 media-libs/mesa             X
 gui-apps/wofi               run
@@ -127,9 +125,6 @@ x11-libs/libva              drm wayland
 # cairo
 media-libs/freetype         png
 
-# gtk+
-x11-libs/cairo              glib svg X
-
 # gnome-base/librsvg
 x11-libs/cairo              glib
 
@@ -141,6 +136,10 @@ x11-libs/gtk+               wayland
 
 # gui-libs/gtk-layer-shell
 x11-libs/gtk+               introspection wayland
+
+# firefox
+x11-libs/cairo              glib svg X
+dev-cpp/cairomm             X
 
 # rust
 virtual/rust                rustfmt
