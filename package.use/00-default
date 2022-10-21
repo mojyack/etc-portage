@@ -77,7 +77,6 @@ x11-libs/gtk+               wayland
 app-i18n/fcitx              wayland
 app-i18n/fcitx-gtk          wayland gtk3
 media-libs/libepoxy         X
-media-libs/mesa             X
 gui-apps/wofi               run
 
 # waybar
