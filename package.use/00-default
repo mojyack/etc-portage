@@ -119,7 +119,7 @@ media-libs/leptonica        webp png jpeg
 # mpv
 media-video/mpv             cli drm egl opengl iconv lua pulseaudio vaapi wayland
 media-video/ffmpeg          encode vaapi
-x11-libs/libva              drm wayland
+media-libs/libva            drm wayland
 
 # cairo
 media-libs/freetype         png
