@@ -143,3 +143,6 @@ dev-cpp/cairomm             X
 # rust
 virtual/rust                rustfmt
 dev-lang/rust-bin           rustfmt
+
+# gtk+
+media-libs/libglvnd         X
