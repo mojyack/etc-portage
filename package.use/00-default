@@ -90,12 +90,13 @@ media-libs/harfbuzz         introspection
 app-accessibility/at-spi2-core introspection
 
 # sway
-gui-wm/sway                 swaybg swaylock swaymsg
+gui-wm/sway                 swaybg
 ## for vulkan renderer
 #gui-libs/wlroots            vulkan
 #media-libs/vulkan-loader    wayland
 
 # swaybg
+gui-apps/swaybg             gdk-pixbuf
 x11-libs/gdk-pixbuf         jpeg
 
 # audacity

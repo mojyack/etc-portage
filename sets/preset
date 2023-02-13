@@ -16,7 +16,6 @@ gui-apps/waybar
 gui-apps/wl-clipboard
 gui-apps/wofi
 gui-wm/sway
-gui-apps/swaybg
 gui-apps/swaylock
 media-fonts/cascadia-code
 media-fonts/fontawesome
