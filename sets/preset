@@ -17,6 +17,7 @@ gui-apps/wl-clipboard
 gui-apps/wofi
 gui-wm/sway
 gui-apps/swaylock
+gui-apps/swaybg
 media-fonts/cascadia-code
 media-fonts/fontawesome
 media-fonts/noto-cjk
