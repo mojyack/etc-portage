@@ -1,8 +1,6 @@
 sys-libs/libunwind
 dev-lang/rust
 
->=dev-lang/python-3.11
-
 # unknown linker flag "--add-needed"
 # already fixed in upstream, wait for efivar-39
 =sys-libs/efivar-38

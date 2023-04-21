@@ -23,6 +23,9 @@ media-libs/libaom           -examples
 sys-apps/debianutils        -installkernel
 media-sound/pulseaudio      -daemon
 
+# doesn't work with clang
+dev-util/ccache             -static-c++
+
 media-plugins/alsa-plugins  pulseaudio
 media-libs/freetype         harfbuzz
 media-libs/harfbuzz         glib truetype
@@ -80,7 +83,7 @@ media-libs/libepoxy         X
 gui-apps/wofi               run
 
 # waybar
-gui-apps/waybar             network popups pulseaudio wifi
+gui-apps/waybar             network popups pipewire wifi
 dev-libs/libdbusmenu        gtk3
 x11-libs/gtk+               introspection
 dev-libs/atk                introspection
