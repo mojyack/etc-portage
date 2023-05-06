@@ -24,8 +24,6 @@ media-fonts/noto-cjk
 media-fonts/noto-emoji
 media-sound/pulsemixer
 media-video/pipewire
-net-analyzer/iftop
-sys-apps/pciutils
 sys-apps/usbutils
 www-client/firefox-bin
 x11-themes/gnome-themes-standard
