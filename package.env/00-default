@@ -12,6 +12,9 @@ media-libs/x264             compiler-clang notext
 # workaround for "libunwind: __unw_add_dynamic_fde: bad fde: FDE is really a CIE" of neovim
 sys-libs/llvm-libunwind     ndebug
 
+# workaround for "no template named 'auto_ptr' in namespace 'std'"
+media-libs/gexiv2           cpp14
+
 # inline asm
 sys-apps/pciutils           compiler-clang
 media-libs/alsa-lib         compiler-clang
