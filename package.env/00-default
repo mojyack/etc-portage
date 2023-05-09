@@ -22,6 +22,7 @@ sys-libs/libxcrypt          compiler-clang
 dev-libs/libffi             compiler-clang
 dev-util/rust-analyzer      compiler-clang
 dev-util/cbindgen           compiler-clang
+app-misc/kbct               compiler-clang
 
 # these packages have their own lto flag
 app-editors/neovim          compiler-clang
