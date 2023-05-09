@@ -28,6 +28,7 @@ app-editors/neovim          compiler-clang
 dev-lang/python             compiler-clang
 dev-lang/spidermonkey       compiler-clang
 www-client/firefox          compiler-clang
+sys-devel/gcc               compiler-clang
 
 # contains tc-ld-force-bfd
 =dev-libs/jansson-2.14-r1   compiler-clang
@@ -36,7 +37,7 @@ www-client/firefox          compiler-clang
 app-emulation/qemu          ignore-unresolved
 
 # reduce build time
-sys-devel/gcc               sys-devel/gcc/bootstrap
+sys-devel/gcc               gcc
 
 # legacy
 sys-devel/binutils          compiler-gcc
