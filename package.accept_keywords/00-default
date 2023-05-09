@@ -10,6 +10,3 @@ dev-libs/date           ~amd64
 
 # media-gfx/gimp
 =media-gfx/gimp-2.99*   **
-media-libs/babl         ~amd64
-media-libs/gegl         ~amd64
-media-libs/gexiv2       ~amd64
