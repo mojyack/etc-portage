@@ -1,4 +1,4 @@
-media-video/mpv             -alsa -uchardet -xv -zlib -libmpv
+media-video/mpv             -alsa -uchardet -xv -zlib -libmpv -libplacebo
 app-i18n/fcitx              -enchant -emoji
 app-i18n/fcitx-gtk          -gtk2 -gtk4 -introspection -snooper
 media-sound/audacity        -portmixer
@@ -125,7 +125,7 @@ app-text/tessdata_fast      osd l10n_zh
 media-libs/leptonica        webp png jpeg
 
 # mpv
-media-video/mpv             cli drm egl iconv lua pulseaudio vaapi wayland
+media-video/mpv             cli drm egl iconv lua pipewire vaapi wayland
 media-video/ffmpeg          encode vaapi
 media-libs/libva            drm wayland
 
