@@ -64,7 +64,7 @@ media-libs/alsa-lib         thread-safety
 net-misc/openssh            hpn
 dev-lang/spidermonkey       jit
 dev-lang/perl               minimal
-media-video/pipewire        sound-server
+media-video/pipewire        sound-server extra
 net-wireless/wpa_supplicant tkip
 
 # workaround to "longjmp causes uninitialized stack frame"
