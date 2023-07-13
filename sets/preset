@@ -25,5 +25,5 @@ media-fonts/noto-emoji
 media-sound/pulsemixer
 media-video/pipewire
 sys-apps/usbutils
-www-client/firefox-bin
+www-client/firefox
 x11-themes/gnome-themes-standard
