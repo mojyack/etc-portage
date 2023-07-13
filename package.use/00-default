@@ -24,6 +24,7 @@ media-libs/libaom           -examples
 sys-apps/debianutils        -installkernel
 media-sound/pulseaudio      -daemon
 net-wireless/wpa_supplicant -crda -fils -hs2-0
+www-client/firefox          -pgo
 
 # doesn't work with clang
 dev-util/ccache             -static-c++
@@ -71,7 +72,8 @@ net-wireless/wpa_supplicant tkip
 net-misc/curl               adns
 
 # firefox
-www-client/firefox-bin      -alsa -selinux
+www-client/firefox          hwaccel screencast pulseaudio wayland dbus
+media-libs/libvpx           postproc
 
 # spidermonkey
 dev-lang/spidermonkey       clang
