@@ -155,3 +155,6 @@ dev-lang/rust               rust-analyzer rust-src rustfmt llvm-libunwind system
 
 # gtk+
 media-libs/libglvnd         X
+
+# mold
+sys-devel/llvm              binutils-plugin # for LLVMgold.so
