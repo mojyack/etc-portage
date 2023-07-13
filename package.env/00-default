@@ -1,7 +1,5 @@
+*/* device-config
 */* compiler-clang compiler-clang-lto
-
-=media-sound/audacity-2.4.2-r3  compiler-clang
-=dev-libs/elfutils-0.187        compiler-gcc
 
 # ghostscript ignores CXXFLAGS(https://bugs.gentoo.org/784173)
 app-text/ghostscript-gpl    ghostscript-bug

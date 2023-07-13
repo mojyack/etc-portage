@@ -1,0 +1,27 @@
+CC="clang"
+CXX="clang++"
+AR="llvm-ar"
+NM="llvm-nm"
+RANLIB="llvm-ranlib"
+AS="clang -c"
+STRIP="llvm-strip"
+LIPO="llvm-lipo"
+CPP="clang-cpp"
+STRINGS="llvm-strings"
+ADDR2LINE="llvm-addr2line"
+READELF="llvm-readelf"
+OBJDUMP="llvm-objdump"
+OBJCOPY="llvm-objcopy"
+LD="ld.$LINKER"
+
+COMMON_FLAGS="-O2 -pipe $COPTFLAGS"
+CFLAGS="$COMMON_FLAGS"
+CXXFLAGS="$COMMON_FLAGS -stdlib=libc++"
+FCFLAGS="$COMMON_FLAGS"
+FFLAGS="$COMMON_FLAGS"
+RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=LINKER $RUSTOPTFLAGS"
+
+LLVM_USE_LIBCXX=1
+CXXSTDLIB="c++"
+
+LDFLAGS="-fuse-ld=LINKER -rtlib=compiler-rt -unwindlib=libunwind -Wl,--as-needed"
