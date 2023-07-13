@@ -22,7 +22,6 @@ app-text/mecab              cpp14
 # inline asm
 sys-apps/pciutils           compiler-clang
 media-libs/alsa-lib         compiler-clang
-gnome-base/librsvg          compiler-clang
 sys-fs/fuse                 compiler-clang
 sys-libs/libxcrypt          compiler-clang
 dev-libs/libffi             compiler-clang
