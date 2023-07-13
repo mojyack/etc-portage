@@ -4,6 +4,14 @@ app-i18n/fcitx          ~amd64
 app-i18n/fcitx-gtk      ~amd64
 app-misc/brightnessctl  ~amd64
 
+# rust
+=dev-lang/rust-1.70.0   ~amd64
+=virtual/rust-1.70.0    ~amd64
+
+# www-client/firefox
+=www-client/firefox-115.0.2:rapid ~amd64
+=dev-libs/nss-3.91      ~amd64
+
 # gui-apps/waybar
 gui-apps/waybar         ~amd64
 dev-libs/date           ~amd64
