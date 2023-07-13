@@ -13,6 +13,10 @@ sys-libs/llvm-libunwind     ndebug
 # workaround for "no template named 'auto_ptr' in namespace 'std'"
 media-libs/gexiv2           cpp14
 
+# deprecated features
+net-p2p/rtorrent            cpp14
+net-libs/libtorrent         cpp14
+
 # inline asm
 sys-apps/pciutils           compiler-clang
 media-libs/alsa-lib         compiler-clang
@@ -41,6 +45,4 @@ sys-devel/gcc               gcc
 
 # legacy
 app-emulation/wine-vanilla  compiler-gcc
-net-p2p/rtorrent            compiler-gcc
-net-libs/libtorrent         compiler-gcc
 sys-boot/grub               compiler-gcc
