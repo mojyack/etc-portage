@@ -20,7 +20,6 @@ gnome-base/librsvg          compiler-clang
 sys-fs/fuse                 compiler-clang
 sys-libs/libxcrypt          compiler-clang
 dev-libs/libffi             compiler-clang
-dev-util/cbindgen           compiler-clang
 app-misc/kbct               compiler-clang
 dev-lang/mono               compiler-clang
 
