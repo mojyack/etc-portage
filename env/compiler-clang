@@ -19,9 +19,9 @@ CFLAGS="$COMMON_FLAGS"
 CXXFLAGS="$COMMON_FLAGS -stdlib=libc++"
 FCFLAGS="$COMMON_FLAGS"
 FFLAGS="$COMMON_FLAGS"
-RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=LINKER $RUSTOPTFLAGS"
+RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=$LINKER $RUSTOPTFLAGS"
 
 LLVM_USE_LIBCXX=1
 CXXSTDLIB="c++"
 
-LDFLAGS="-fuse-ld=LINKER -rtlib=compiler-rt -unwindlib=libunwind -Wl,--as-needed"
+LDFLAGS="-fuse-ld=$LINKER -rtlib=compiler-rt -unwindlib=libunwind -Wl,--as-needed"
