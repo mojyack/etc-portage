@@ -1,3 +1,4 @@
 CFLAGS="${CFLAGS} -flto=thin"
 CXXFLAGS="${CXXFLAGS} -flto=thin"
 RUSTFLAGS="${RUSTFLAGS} -C linker-plugin-lto"
+LDFLAGS="${LDFLAGS} -flto=thin"
