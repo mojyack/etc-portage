@@ -1,5 +1,4 @@
 sys-libs/libunwind
-dev-lang/rust
 
 # unknown linker flag "--add-needed"
 # already fixed in upstream, wait for efivar-39
