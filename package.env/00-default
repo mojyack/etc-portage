@@ -16,6 +16,7 @@ media-libs/gexiv2           cpp14
 # deprecated features
 net-p2p/rtorrent            cpp14
 net-libs/libtorrent         cpp14
+net-misc/aria2              cpp14
 
 # inline asm
 sys-apps/pciutils           compiler-clang
