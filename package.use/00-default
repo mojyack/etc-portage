@@ -25,6 +25,7 @@ sys-apps/debianutils        -installkernel
 media-sound/pulseaudio      -daemon
 net-wireless/wpa_supplicant -crda -fils -hs2-0
 www-client/firefox          -pgo
+sci-visualization/gnuplot   -gd
 
 # doesn't work with clang
 dev-util/ccache             -static-c++
@@ -160,3 +161,6 @@ media-libs/libglvnd         X
 
 # mold
 sys-devel/llvm              binutils-plugin # for LLVMgold.so
+
+# gnuplot
+sci-visualization/gnuplot   cairo
