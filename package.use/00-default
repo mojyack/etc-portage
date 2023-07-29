@@ -37,7 +37,7 @@ media-gfx/imagemagick       jpeg png webp
 media-sound/sox             flac ogg
 x11-terms/alacritty         wayland
 media-fonts/fontawesome     otf
-media-libs/mesa             gallium gles2 vaapi vulkan wayland zstd
+media-libs/mesa             gallium gles2 vaapi wayland zstd
 dev-cpp/gtkmm               wayland
 sys-fs/cryptsetup           openssl
 dev-libs/openssl            asm
