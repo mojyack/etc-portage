@@ -156,9 +156,6 @@ virtual/rust                rustfmt
 dev-lang/rust-bin           rustfmt
 dev-lang/rust               rust-analyzer rust-src rustfmt llvm-libunwind system-bootstrap system-llvm
 
-# gtk+
-media-libs/libglvnd         X
-
 # mold
 sys-devel/llvm              binutils-plugin # for LLVMgold.so
 
