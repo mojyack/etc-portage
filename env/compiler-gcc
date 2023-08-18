@@ -1,5 +1,5 @@
-CC="gcc"
-CXX="g++"
+CC="${PREFIX}gcc"
+CXX="${PREFIX}g++"
 AR="ar"
 NM="nm"
 RANLIB="ranlib"

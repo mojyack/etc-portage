@@ -1,5 +1,5 @@
-CC="clang"
-CXX="clang++"
+CC="${PREFIX}clang"
+CXX="${PREFIX}clang++"
 AR="llvm-ar"
 NM="llvm-nm"
 RANLIB="llvm-ranlib"
