@@ -1,0 +1,4 @@
+unset PREFIX
+unset COPTFLAGS
+unset RUSTOPTFLAGS
+unset LINKER
