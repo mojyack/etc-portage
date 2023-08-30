@@ -12,9 +12,5 @@ app-misc/brightnessctl  ~amd64
 =www-client/firefox-115.0.2:rapid ~amd64
 =dev-libs/nss-3.91      ~amd64
 
-# gui-apps/waybar
-gui-apps/waybar         ~amd64
-dev-libs/date           ~amd64
-
 # media-gfx/gimp
 =media-gfx/gimp-2.99*   **

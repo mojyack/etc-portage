@@ -12,7 +12,6 @@ dev-python/pynvim
 dev-vcs/git
 gui-apps/grim
 gui-apps/slurp
-gui-apps/waybar
 gui-apps/wl-clipboard
 gui-apps/wofi
 gui-wm/sway
