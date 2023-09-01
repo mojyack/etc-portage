@@ -104,13 +104,6 @@ x11-libs/wxGTK              X
 media-libs/flac             cxx
 sys-libs/llvm-libunwind     static-libs
 
-# gimp
-media-gfx/gimp              heif webp
-app-text/poppler            cairo
-media-libs/gegl             cairo
-media-libs/babl             lcms introspection
-media-libs/gegl             lcms introspection
-
 # tesseract
 app-text/tesseract          jpeg png webp
 app-text/tessdata_fast      osd l10n_zh
