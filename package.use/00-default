@@ -30,8 +30,7 @@ sci-visualization/gnuplot   -gd
 # doesn't work with clang
 dev-util/ccache             -static-c++
 
-media-plugins/alsa-plugins  pulseaudio
-media-libs/freetype         harfbuzz
+media-libs/freetype         harfbuzz cleartype-hinting
 media-libs/harfbuzz         glib truetype
 sys-kernel/gentoo-sources   symlink experimental
 media-gfx/imagemagick       jpeg png webp
@@ -39,11 +38,6 @@ media-sound/sox             flac ogg
 x11-terms/alacritty         wayland
 media-fonts/fontawesome     otf
 media-libs/mesa             gallium gles2 vaapi wayland zstd
-dev-cpp/gtkmm               wayland
-sys-fs/cryptsetup           openssl
-dev-libs/openssl            asm
-dev-libs/libtomcrypt        tomsfastmath
-sys-process/procps          cpp
 sys-apps/net-tools          hostname
 dev-libs/gmp                asm cxx
 net-nds/rpcbind             warmstarts
@@ -52,19 +46,13 @@ dev-vcs/git                 blksha1 curl
 media-libs/libvpx           highbitdepth
 net-fs/nfs-utils            libmount nfsv4
 media-gfx/imagemagick       cxx
-net-libs/nodejs             icu system-icu system-ssl
 x11-libs/libxkbcommon       wayland
 sys-apps/portage            native-extensions
 media-video/ffmpeg          dav1d
-media-libs/libepoxy         egl
-dev-python/msgpack          native-extensions
 media-libs/dav1d            8bit 10bit asm
-app-editors/neovim          tui
 net-wireless/iwd            client monitor
-media-libs/freetype         cleartype-hinting
 media-libs/alsa-lib         thread-safety 
 net-misc/openssh            hpn
-dev-lang/spidermonkey       jit
 dev-lang/perl               minimal
 media-video/pipewire        sound-server extra
 net-wireless/wpa_supplicant tkip
@@ -72,12 +60,25 @@ net-wireless/wpa_supplicant tkip
 # workaround to "longjmp causes uninitialized stack frame"
 net-misc/curl               adns
 
+# neovim
+app-editors/neovim          tui
+dev-python/msgpack          native-extensions
+
+# openssl
+dev-libs/openssl            asm
+sys-process/procps          cpp
+
+# yt-dlp
+dev-libs/libtomcrypt        tomsfastmath
+
 # firefox
 www-client/firefox          hwaccel screencast pulseaudio wayland dbus
 media-libs/libvpx           postproc
+net-libs/nodejs             icu system-icu system-ssl
+media-libs/libepoxy         egl
 
 # spidermonkey
-dev-lang/spidermonkey       clang
+dev-lang/spidermonkey       clang jit
 
 # gui-apps/wofi
 x11-libs/gtk+               wayland
@@ -85,8 +86,6 @@ x11-libs/gtk+               wayland
 # fcitx5
 app-i18n/fcitx              wayland
 app-i18n/fcitx-gtk          wayland gtk3
-media-libs/libepoxy         X
-gui-apps/wofi               run
 
 # sway
 gui-wm/sway                 swaybg
