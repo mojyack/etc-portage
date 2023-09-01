@@ -134,9 +134,6 @@ dev-lang/python             xml
 # dev-cpp/gtkmm
 x11-libs/gtk+               wayland
 
-# gui-libs/gtk-layer-shell
-x11-libs/gtk+               introspection wayland
-
 # rust
 virtual/rust                rustfmt
 dev-lang/rust-bin           rustfmt
