@@ -137,10 +137,6 @@ x11-libs/gtk+               wayland
 # gui-libs/gtk-layer-shell
 x11-libs/gtk+               introspection wayland
 
-# firefox
-x11-libs/cairo              glib svg X
-dev-cpp/cairomm             X
-
 # rust
 virtual/rust                rustfmt
 dev-lang/rust-bin           rustfmt
