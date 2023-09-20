@@ -1,5 +1,5 @@
-MAKEOPTS="-j@CORES@"
-FEATURES="nodoc noinfo noman parallel-fetch parallel-install -pid-sandbox -sandbox -userfetch -userpriv -usersandbox -usersync -xattr"
+MAKEOPTS="-j80 -l10"
+FEATURES="nodoc noinfo noman distcc parallel-fetch parallel-install -pid-sandbox -sandbox -userfetch -userpriv -usersandbox -usersync -xattr"
 
 ACCEPT_KEYWORDS="amd64"
 ACCEPT_LICENSE="*"
