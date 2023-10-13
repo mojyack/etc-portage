@@ -18,6 +18,7 @@ net-p2p/rtorrent            cpp14
 net-libs/libtorrent         cpp14
 net-misc/aria2              cpp14
 app-text/mecab              cpp14
+media-libs/audiofile        cpp14
 
 # inline asm
 sys-apps/pciutils           compiler-clang
