@@ -1,5 +1,1 @@
 sys-libs/libunwind
-
-# unknown linker flag "--add-needed"
-# already fixed in upstream, wait for efivar-39
-=sys-libs/efivar-38
