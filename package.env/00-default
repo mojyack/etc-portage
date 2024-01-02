@@ -1,28 +1,6 @@
 */* device-config
 */* compiler-clang compiler-clang-lto
 
-# ghostscript ignores CXXFLAGS(https://bugs.gentoo.org/784173)
-app-text/ghostscript-gpl    ghostscript-bug
-
-# endian test failed(https://code.videolan.org/videolan/x264/-/issues/24)
-media-libs/x264             compiler-clang notext
-
-# workaround for "libunwind: __unw_add_dynamic_fde: bad fde: FDE is really a CIE" of neovim
-sys-libs/llvm-libunwind     ndebug
-
-# workaround for "no template named 'auto_ptr' in namespace 'std'"
-media-libs/gexiv2           cpp14
-
-# workaround for "https://github.com/libffi/libffi/issues/791"
-dev-libs/libffi             force-ld
-
-# deprecated features
-net-p2p/rtorrent            cpp14
-net-libs/libtorrent         cpp14
-net-misc/aria2              cpp14
-app-text/mecab              cpp14
-media-libs/audiofile        cpp14
-
 # inline asm
 sys-apps/pciutils           compiler-clang
 media-libs/alsa-lib         compiler-clang
@@ -42,12 +20,34 @@ sys-devel/gcc               compiler-clang
 # contains tc-ld-force-bfd
 =dev-libs/jansson-2.14-r1   compiler-clang
 
+# does not support clang
+app-emulation/wine-vanilla  compiler-gcc
+sys-boot/grub               compiler-gcc
+
+# endian test failed(https://code.videolan.org/videolan/x264/-/issues/24)
+media-libs/x264             compiler-clang notext
+
+# deprecated features
+net-p2p/rtorrent            cpp14
+net-libs/libtorrent         cpp14
+net-misc/aria2              cpp14
+app-text/mecab              cpp14
+media-libs/audiofile        cpp14
+
+# ghostscript ignores CXXFLAGS(https://bugs.gentoo.org/784173)
+app-text/ghostscript-gpl    ghostscript-bug
+
+# workaround for "libunwind: __unw_add_dynamic_fde: bad fde: FDE is really a CIE" of neovim
+sys-libs/llvm-libunwind     ndebug
+
+# workaround for "no template named 'auto_ptr' in namespace 'std'"
+media-libs/gexiv2           cpp14
+
+# workaround for "https://github.com/libffi/libffi/issues/791"
+dev-libs/libffi             force-lld
+
 # fail static linking
 app-emulation/qemu          ignore-unresolved
 
 # reduce build time
 sys-devel/gcc               gcc
-
-# legacy
-app-emulation/wine-vanilla  compiler-gcc
-sys-boot/grub               compiler-gcc
