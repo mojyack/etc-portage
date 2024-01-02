@@ -13,6 +13,9 @@ sys-libs/llvm-libunwind     ndebug
 # workaround for "no template named 'auto_ptr' in namespace 'std'"
 media-libs/gexiv2           cpp14
 
+# workaround for "https://github.com/libffi/libffi/issues/791"
+dev-libs/libffi             force-ld
+
 # deprecated features
 net-p2p/rtorrent            cpp14
 net-libs/libtorrent         cpp14
