@@ -2,11 +2,6 @@
 */* compiler-clang compiler-clang-lto
 
 # inline asm
-sys-apps/pciutils           compiler-clang
-media-libs/alsa-lib         compiler-clang
-sys-fs/fuse                 compiler-clang
-sys-libs/libxcrypt          compiler-clang
-dev-libs/libffi             compiler-clang
 app-misc/kbct               compiler-clang
 dev-lang/mono               compiler-clang
 
