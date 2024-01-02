@@ -1,0 +1,7 @@
+# waydroid
+app-containers/lxc      -caps -pam
+
+app-containers/lxc      seccomp
+dev-python/pyclip       wayland
+sys-libs/libcap         static-libs
+
