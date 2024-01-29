@@ -33,7 +33,7 @@ dev-util/ccache             -static-c++
 media-libs/freetype         harfbuzz cleartype-hinting
 media-libs/harfbuzz         glib truetype
 sys-kernel/gentoo-sources   symlink experimental
-media-gfx/imagemagick       jpeg png webp
+media-gfx/imagemagick       jpeg png webp xml
 media-sound/sox             flac ogg
 x11-terms/alacritty         wayland
 media-fonts/fontawesome     otf
