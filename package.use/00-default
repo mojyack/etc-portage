@@ -57,6 +57,7 @@ dev-lang/perl               minimal
 media-video/pipewire        sound-server extra
 net-wireless/wpa_supplicant tkip
 sys-kernel/linux-firmware   deduplicate redistributable
+sys-auth/seatd              server
 
 # workaround to "longjmp causes uninitialized stack frame"
 net-misc/curl               adns
