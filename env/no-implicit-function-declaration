@@ -1,0 +1,3 @@
+CFLAGS="${CFLAGS} -Wno-implicit-function-declaration"
+CXXFLAGS="${CXXFLAGS} -Wno-implicit-function-declaration"
+

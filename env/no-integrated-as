@@ -1,0 +1,2 @@
+CFLAGS="${CFLAGS} -no-integrated-as"
+CXXFLAGS="${CXXFLAGS} -no-integrated-as"

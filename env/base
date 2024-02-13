@@ -7,4 +7,4 @@ FCFLAGS="$COMMON_FLAGS"
 FFLAGS="$COMMON_FLAGS"
 RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=$LINKER $RUSTOPTFLAGS"
 
-LDFLAGS="-fuse-ld=$LINKER -Wl,--as-needed -Wl,--undefined-version"
+LDFLAGS="-fuse-ld=$LINKER -Wl,--as-needed -Wl,--undefined-version -Wl,--threads=80"

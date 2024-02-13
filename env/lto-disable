@@ -1,0 +1,2 @@
+C_LTO_FLAGS=""
+RUST_LTO_FLAGS=""

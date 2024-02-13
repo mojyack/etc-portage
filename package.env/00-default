@@ -1,26 +1,23 @@
 */* device-config
-*/* compiler-clang compiler-clang-lto
+*/* base
+*/* lto-enable
 
 # inline asm
-app-misc/kbct               compiler-clang
-dev-lang/mono               compiler-clang
+app-misc/kbct               lto-disable
+dev-lang/mono               lto-disable
 
 # these packages have their own lto flag
-app-editors/neovim          compiler-clang
-dev-lang/python             compiler-clang
-dev-lang/spidermonkey       compiler-clang
-www-client/firefox          compiler-clang
-sys-devel/gcc               compiler-clang
+app-editors/neovim          lto-disable
+dev-lang/python             lto-disable
+dev-lang/spidermonkey       lto-disable
+www-client/firefox          lto-disable
+sys-devel/gcc               lto-disable
 
 # contains tc-ld-force-bfd
-=dev-libs/jansson-2.14-r1   compiler-clang
-
-# does not support clang
-app-emulation/wine-vanilla  compiler-gcc
-sys-boot/grub               compiler-gcc
+=dev-libs/jansson-2.14-r1   lto-disable
 
 # endian test failed(https://code.videolan.org/videolan/x264/-/issues/24)
-media-libs/x264             compiler-clang notext
+media-libs/x264             lto-disable notext
 
 # deprecated features
 net-p2p/rtorrent            cpp14
@@ -44,5 +41,4 @@ dev-libs/libffi             force-lld
 # fail static linking
 app-emulation/qemu          ignore-unresolved
 
-# reduce build time
-sys-devel/gcc               gcc
+*/* lto-apply
