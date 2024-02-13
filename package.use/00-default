@@ -1,5 +1,5 @@
 media-video/mpv             -alsa -uchardet -xv -zlib -libmpv -libplacebo
-app-i18n/fcitx              -enchant -emoji
+app-i18n/fcitx              -autostart -enchant -emoji
 app-i18n/fcitx-gtk          -gtk2 -gtk4 -introspection -snooper
 media-sound/audacity        -portmixer
 gui-apps/wofi               -dmenu -drun
