@@ -1,0 +1,1 @@
+LDFLAGS="${LDFLAGS} -Wl,-z,stack-size=0x400000" # 4MiB
