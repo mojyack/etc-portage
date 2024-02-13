@@ -4,5 +4,9 @@ app-i18n/fcitx          ~amd64
 app-i18n/fcitx-gtk      ~amd64
 app-misc/brightnessctl  ~amd64
 
+=sys-libs/musl-1.2.4-r1 ~amd64
+
 # media-gfx/gimp
 =media-gfx/gimp-2.99*   **
+
+
