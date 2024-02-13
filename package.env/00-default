@@ -41,4 +41,7 @@ dev-libs/libffi             force-lld
 # fail static linking
 app-emulation/qemu          ignore-unresolved
 
+# c compat
+sys-process/runit           no-implicit-function-declaration no-implicit-int
+
 */* lto-apply
