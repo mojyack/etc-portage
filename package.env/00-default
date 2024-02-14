@@ -47,4 +47,7 @@ sys-process/runit           no-implicit-function-declaration no-implicit-int
 # needs more stack
 sys-devel/mold              increase-stack-size
 
+# error on non-gcc system
+media-sound/cmus            set-hostcc
+
 */* lto-apply
