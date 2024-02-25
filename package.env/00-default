@@ -50,4 +50,7 @@ sys-devel/mold              increase-stack-size
 # error on non-gcc system
 media-sound/cmus            set-hostcc
 
+# for pgo
+www-client/firefox          sandbox
+
 */* lto-apply
