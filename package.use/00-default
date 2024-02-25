@@ -2,7 +2,6 @@ media-video/mpv             -alsa -uchardet -xv -zlib -libmpv -libplacebo
 app-i18n/fcitx              -autostart -enchant -emoji
 app-i18n/fcitx-gtk          -gtk2 -gtk4 -snooper
 media-sound/audacity        -portmixer
-gui-apps/wofi               -dmenu -drun
 media-gfx/gimp              -udev
 gui-wm/sway                 -swaynag
 net-fs/samba                -regedit -system-mitkrb5
@@ -11,18 +10,13 @@ sys-apps/util-linux         -cramfs -hardlink -logger
 dev-vcs/git                 -perl -webdav
 app-crypt/gnupg             -smartcard -tofu
 sys-libs/ldb                -lmdb
-sys-apps/systemd            -gcrypt
 sys-apps/portage            -rsync-verify
-media-sound/pulseaudio      -alsa -alsa-plugin -asyncns -daemon -glib -ipv6 -orc -ssl -udev -webrtc-aec
 sys-fs/lvm2                 -readline -thin -udev
-sys-devel/gcc               -lto -pgo
 sys-devel/binutils          -pgo
 sys-auth/pambase            -passwdqc
 sys-libs/compiler-rt-sanitizers -asan -cfi -dfsan -gwp-asan -hwasan -libfuzzer -lsan -memprof -msan -orc -safestack -scudo -tsan -ubsan -xray
-net-libs/glib-networking    -gnome
 media-libs/libaom           -examples
 sys-apps/debianutils        -installkernel
-media-sound/pulseaudio      -daemon
 net-wireless/wpa_supplicant -crda -fils -hs2-0
 www-client/firefox          -pgo
 sci-visualization/gnuplot   -gd
@@ -79,12 +73,6 @@ www-client/firefox          hwaccel screencast pulseaudio wayland dbus
 media-libs/libvpx           postproc
 net-libs/nodejs             icu system-icu system-ssl
 media-libs/libepoxy         egl
-
-# spidermonkey
-dev-lang/spidermonkey       clang jit
-
-# gui-apps/wofi
-x11-libs/gtk+               wayland
 
 # fcitx5
 app-i18n/fcitx              wayland
