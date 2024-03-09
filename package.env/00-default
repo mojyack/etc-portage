@@ -16,9 +16,6 @@ sys-devel/gcc               lto-disable
 # contains tc-ld-force-bfd
 =dev-libs/jansson-2.14-r1   lto-disable
 
-# endian test failed(https://code.videolan.org/videolan/x264/-/issues/24)
-media-libs/x264             lto-disable notext
-
 # deprecated features
 net-p2p/rtorrent            cpp14
 net-libs/libtorrent         cpp14
