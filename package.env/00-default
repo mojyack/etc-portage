@@ -1,12 +1,11 @@
 */* device-config
 */* base
-*/* lto-enable
 
 # inline asm
-dev-lang/mono               lto-disable
+dev-lang/mono               disable-default-lto
 
 # contains tc-ld-force-bfd
-=dev-libs/jansson-2.14-r1   lto-disable
+=dev-libs/jansson-2.14-r1   disable-default-lto
 
 # deprecated features
 net-p2p/rtorrent            cpp14
@@ -38,5 +37,3 @@ media-sound/cmus            set-hostcc
 
 # for pgo
 www-client/firefox          sandbox
-
-*/* lto-apply

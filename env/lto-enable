@@ -1,2 +1,0 @@
-C_LTO_FLAGS="-flto=thin"
-RUST_LTO_FLAGS="-C linker-plugin-lto -C link-arg=-flto=thin"

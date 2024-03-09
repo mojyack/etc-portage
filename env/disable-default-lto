@@ -1,0 +1,2 @@
+# treated in global bashrc later
+DISABLE_DEFAULT_LTO=1
