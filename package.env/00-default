@@ -3,7 +3,6 @@
 */* lto-enable
 
 # inline asm
-app-misc/kbct               lto-disable
 dev-lang/mono               lto-disable
 
 # these packages have their own lto flag
