@@ -35,5 +35,10 @@ sys-devel/mold              increase-stack-size
 # error on non-gcc system
 media-sound/cmus            set-hostcc
 
+# https://gitweb.gentoo.org/repo/gentoo.git/commit/?id=127dc03a3c8fa58347375f41795635594a47b2c6 disables lto.
+# which causes a linker error because some llvm static library (e.g. libLLVMSupport.a) is a llvm-ir object.
+# why lld can handle this?
+dev-debug/lldb      force-lld
+
 # for pgo
 www-client/firefox          sandbox
