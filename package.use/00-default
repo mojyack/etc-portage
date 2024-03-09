@@ -73,6 +73,7 @@ www-client/firefox          hwaccel screencast pulseaudio wayland dbus
 media-libs/libvpx           postproc
 net-libs/nodejs             icu system-icu system-ssl
 media-libs/libepoxy         egl
+dev-libs/libpcre2           static-libs
 # for pgo
 gui-libs/wlroots            tinywl
 
