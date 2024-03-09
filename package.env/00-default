@@ -32,9 +32,6 @@ sys-libs/llvm-libunwind     ndebug
 # workaround for "no template named 'auto_ptr' in namespace 'std'"
 media-libs/gexiv2           cpp14
 
-# workaround for "https://github.com/libffi/libffi/issues/791"
-dev-libs/libffi             force-lld
-
 # fail static linking
 app-emulation/qemu          ignore-unresolved
 
