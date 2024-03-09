@@ -1,10 +1,8 @@
-LD="ld.$LINKER"
-
 COMMON_FLAGS="-O2 -pipe $COPTFLAGS"
 CFLAGS="$COMMON_FLAGS"
 CXXFLAGS="$COMMON_FLAGS"
 FCFLAGS="$COMMON_FLAGS"
 FFLAGS="$COMMON_FLAGS"
-RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=$LINKER $RUSTOPTFLAGS"
+RUSTFLAGS="-C opt-level=3 $RUSTOPTFLAGS"
 
-LDFLAGS="-fuse-ld=$LINKER -Wl,--as-needed -Wl,--undefined-version -Wl,--threads=80"
+LDFLAGS="-Wl,--as-needed -Wl,--undefined-version -Wl,--threads=80"
