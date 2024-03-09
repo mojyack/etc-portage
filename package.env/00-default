@@ -5,13 +5,6 @@
 # inline asm
 dev-lang/mono               lto-disable
 
-# these packages have their own lto flag
-app-editors/neovim          lto-disable
-dev-lang/python             lto-disable
-dev-lang/spidermonkey       lto-disable
-www-client/firefox          lto-disable
-sys-devel/gcc               lto-disable
-
 # contains tc-ld-force-bfd
 =dev-libs/jansson-2.14-r1   lto-disable
 
