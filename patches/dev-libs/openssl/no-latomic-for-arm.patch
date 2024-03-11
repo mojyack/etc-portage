@@ -1,0 +1,13 @@
+diff --git a/Configurations/10-main.conf b/Configurations/10-main.conf
+index 280a75b2..2edbff08 100644
+--- a/Configurations/10-main.conf
++++ b/Configurations/10-main.conf
+@@ -767,7 +767,7 @@ my %targets = (
+         #
+         # ./Configure linux-armv4 -march=armv6 -D__ARM_MAX_ARCH__=8
+         #
+-        inherit_from     => [ "linux-latomic" ],
++        inherit_from     => [ "linux-generic32" ],
+         asm_arch         => 'armv4',
+         perlasm_scheme   => "linux32",
+     },
