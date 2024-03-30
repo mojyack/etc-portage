@@ -20,6 +20,7 @@ sys-apps/debianutils        -installkernel
 net-wireless/wpa_supplicant -crda -fils -hs2-0
 sci-visualization/gnuplot   -gd
 net-fs/nfs-utils            -nfsv3
+net-misc/chrony             -caps -nettle -nts -phc -pps -readline -refclock -sechash
 
 # doesn't work with clang
 dev-util/ccache             -static-c++
