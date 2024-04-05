@@ -1,9 +1,9 @@
 pre_src_configure() {
-    # $JOBS and $LINKER are from env/device-config
+    # $JOBS $LDJOBS and $LINKER are from env/device-config
     MAKEOPTS="$MAKEOPTS -j$JOBS"
     LD="ld.$LINKER"
     RUSTFLAGS="$RUSTFLAGS -C link-arg=-fuse-ld=$LINKER"
-    LDFLAGS="$LDFLAGS -fuse-ld=$LINKER -Wl,--threads=$JOBS"
+    LDFLAGS="$LDFLAGS -fuse-ld=$LINKER -Wl,--threads=$LDJOBS"
 
     if [[ $DISABLE_DEFAULT_LTO != 1 ]]; then
         echo "applying default lto"
