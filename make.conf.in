@@ -1,4 +1,4 @@
-MAKEOPTS="-j80 -l10"
+MAKEOPTS="-l10"
 FEATURES="nodoc noinfo noman distcc parallel-fetch parallel-install -pid-sandbox -sandbox -userfetch -userpriv -usersandbox -usersync -xattr"
 
 ACCEPT_KEYWORDS="amd64"
