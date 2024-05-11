@@ -1,0 +1,5 @@
+media-libs/mesa     vaapi
+
+# mpv
+media-video/mpv     vaapi
+media-video/ffmpeg  vaapi
