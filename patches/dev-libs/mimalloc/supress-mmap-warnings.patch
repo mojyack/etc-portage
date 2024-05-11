@@ -1,8 +1,21 @@
+diff --git a/src/os.c b/src/os.c
+index dda6844..f6df66a 100644
+--- a/src/os.c
++++ b/src/os.c
+@@ -234,7 +234,7 @@ static void* mi_os_prim_alloc_aligned(size_t size, size_t alignment, bool commit
+   }
+   else {
+     // if not aligned, free it, overallocate, and unmap around it
+-    _mi_warning_message("unable to allocate aligned OS memory directly, fall back to over-allocation (size: 0x%zx bytes, address: %p, alignment: 0x%zx, commit: %d)\n", size, p, alignment, commit);
++    _mi_verbose_message("unable to allocate aligned OS memory directly, fall back to over-allocation (size: 0x%zx bytes, address: %p, alignment: 0x%zx, commit: %d)\n", size, p, alignment, commit);
+     mi_os_prim_free(p, size, commit, stats);
+     if (size >= (SIZE_MAX - alignment)) return NULL; // overflow
+     const size_t over_size = size + alignment;
 diff --git a/src/prim/unix/prim.c b/src/prim/unix/prim.c
-index 87ad63b..0a263ec 100644
+index 8d40536..a0fedde 100644
 --- a/src/prim/unix/prim.c
 +++ b/src/prim/unix/prim.c
-@@ -192,7 +192,7 @@ static void* unix_mmap_prim(void* addr, size_t size, size_t try_alignment, int p
+@@ -199,7 +199,7 @@ static void* unix_mmap_prim(void* addr, size_t size, size_t try_alignment, int p
        p = mmap(addr, size, protect_flags, flags | MAP_ALIGNED(n), fd, 0);
        if (p==MAP_FAILED || !_mi_is_aligned(p,try_alignment)) { 
          int err = errno;
@@ -11,7 +24,7 @@ index 87ad63b..0a263ec 100644
        }
        if (p!=MAP_FAILED) return p;
        // fall back to regular mmap      
-@@ -217,7 +217,7 @@ static void* unix_mmap_prim(void* addr, size_t size, size_t try_alignment, int p
+@@ -224,7 +224,7 @@ static void* unix_mmap_prim(void* addr, size_t size, size_t try_alignment, int p
          #else
          int err = errno;
          #endif
