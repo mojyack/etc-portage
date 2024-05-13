@@ -1,0 +1,16 @@
+diff --git a/ranger/gui/ui.py b/ranger/gui/ui.py
+index d2dbb759..64e89f86 100644
+--- a/ranger/gui/ui.py
++++ b/ranger/gui/ui.py
+@@ -147,7 +147,10 @@ class UI(  # pylint: disable=too-many-instance-attributes,too-many-public-method
+             pass
+         if self.settings.mouse_enabled:
+             _setup_mouse(dict(value=False))
+-        curses.endwin()
++        try:
++            curses.endwin()
++        except curses.error:
++            pass
+         self.is_on = False
+ 
+     def set_load_mode(self, boolean):
