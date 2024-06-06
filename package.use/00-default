@@ -71,7 +71,7 @@ sys-process/procps          cpp
 dev-libs/libtomcrypt        tomsfastmath
 
 # firefox
-www-client/firefox          hwaccel screencast pulseaudio wayland dbus openh264
+www-client/firefox          hwaccel screencast pulseaudio wayland dbus
 media-libs/libvpx           postproc
 net-libs/nodejs             icu system-icu system-ssl
 media-libs/libepoxy         egl
