@@ -1,8 +1,8 @@
 diff --git a/src/os.c b/src/os.c
-index dda6844..f6df66a 100644
+index ce10427..0a0e609 100644
 --- a/src/os.c
 +++ b/src/os.c
-@@ -234,7 +234,7 @@ static void* mi_os_prim_alloc_aligned(size_t size, size_t alignment, bool commit
+@@ -232,7 +232,7 @@ static void* mi_os_prim_alloc_aligned(size_t size, size_t alignment, bool commit
    }
    else {
      // if not aligned, free it, overallocate, and unmap around it
@@ -11,25 +11,3 @@ index dda6844..f6df66a 100644
      mi_os_prim_free(p, size, commit, stats);
      if (size >= (SIZE_MAX - alignment)) return NULL; // overflow
      const size_t over_size = size + alignment;
-diff --git a/src/prim/unix/prim.c b/src/prim/unix/prim.c
-index 8d40536..a0fedde 100644
---- a/src/prim/unix/prim.c
-+++ b/src/prim/unix/prim.c
-@@ -199,7 +199,7 @@ static void* unix_mmap_prim(void* addr, size_t size, size_t try_alignment, int p
-       p = mmap(addr, size, protect_flags, flags | MAP_ALIGNED(n), fd, 0);
-       if (p==MAP_FAILED || !_mi_is_aligned(p,try_alignment)) { 
-         int err = errno;
--        _mi_warning_message("unable to directly request aligned OS memory (error: %d (0x%x), size: 0x%zx bytes, alignment: 0x%zx, hint address: %p)\n", err, err, size, try_alignment, addr);
-+        _mi_verbose_message("unable to directly request aligned OS memory (error: %d (0x%x), size: 0x%zx bytes, alignment: 0x%zx, hint address: %p)\n", err, err, size, try_alignment, addr);
-       }
-       if (p!=MAP_FAILED) return p;
-       // fall back to regular mmap      
-@@ -224,7 +224,7 @@ static void* unix_mmap_prim(void* addr, size_t size, size_t try_alignment, int p
-         #else
-         int err = errno;
-         #endif
--        _mi_warning_message("unable to directly request hinted aligned OS memory (error: %d (0x%x), size: 0x%zx bytes, alignment: 0x%zx, hint address: %p)\n", err, err, size, try_alignment, hint);
-+        _mi_verbose_message("unable to directly request hinted aligned OS memory (error: %d (0x%x), size: 0x%zx bytes, alignment: 0x%zx, hint address: %p)\n", err, err, size, try_alignment, hint);
-       }
-       if (p!=MAP_FAILED) return p;
-       // fall back to regular mmap      
