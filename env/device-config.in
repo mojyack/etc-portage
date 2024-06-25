@@ -1,0 +1,6 @@
+JOBS=8
+LDJOBS=8
+COPTFLAGS="-march=skylake"
+RUSTOPTFLAGS="-C target-cpu=skylake"
+LINKER="mold"
+
