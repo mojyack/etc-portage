@@ -1,0 +1,14 @@
+diff --git a/libcxx/include/__config b/libcxx/include/__config
+index 8b2eaf6..4d737a4 100644
+--- a/libcxx/include/__config
++++ b/libcxx/include/__config
+@@ -1246,6 +1246,9 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
+ #  else
+ #    define _LIBCPP_NOINLINE
+ #  endif
++// Workaround for firefox build failure
++# undef _LIBCPP_NOINLINE
++# define _LIBCPP_NOINLINE
+ 
+ // We often repeat things just for handling wide characters in the library.
+ // When wide characters are disabled, it can be useful to have a quick way of
