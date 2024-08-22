@@ -27,7 +27,7 @@ media-libs/gexiv2           cpp14
 app-emulation/qemu          ignore-unresolved
 
 # c compat
-sys-process/runit           no-implicit-function-declaration no-implicit-int
+sys-apps/runit              no-implicit-function-declaration no-implicit-int
 media-plugins/gst-plugins-v4l2 no-incompatible-function-pointer-types
 
 # needs more stack
