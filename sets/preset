@@ -22,10 +22,10 @@ media-fonts/noto-emoji
 media-sound/pulsemixer
 net-misc/dhcpcd
 net-misc/chrony
+sys-apps/runit
 sys-apps/pciutils
 sys-apps/usbutils
 sys-auth/seatd
 sys-libs/timezone-data
-sys-process/runit
 x11-terms/alacritty
 x11-themes/gnome-themes-standard
