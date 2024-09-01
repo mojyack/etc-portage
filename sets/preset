@@ -22,7 +22,7 @@ media-fonts/noto-emoji
 media-sound/pulsemixer
 net-misc/dhcpcd
 net-misc/chrony
-sys-apps/runit
+sys-apps/daemonfs
 sys-apps/pciutils
 sys-apps/usbutils
 sys-auth/seatd
