@@ -5,6 +5,7 @@ app-i18n/fcitx-gtk
 app-i18n/fcitx5-mikan
 app-misc/ranger
 app-misc/tmux
+app-portage/portage-utils
 app-shells/zsh
 app-shells/zsh-completions
 dev-python/pynvim
@@ -20,8 +21,8 @@ media-fonts/fontawesome
 media-fonts/noto-cjk
 media-fonts/noto-emoji
 media-sound/pulsemixer
-net-misc/dhcpcd
 net-misc/chrony
+net-misc/dhcpcd
 sys-apps/daemonfs
 sys-apps/pciutils
 sys-apps/usbutils
