@@ -22,6 +22,7 @@ sci-visualization/gnuplot   -gd
 net-fs/nfs-utils            -nfsv3
 net-misc/chrony             -caps -nettle -nts -phc -pps -readline -refclock -sechash
 sys-kernel/linux-firmware   -initramfs
+media-sound/cmus            -mad -systemd
 
 # doesn't work with clang
 dev-util/ccache             -static-c++
@@ -55,6 +56,7 @@ net-wireless/wpa_supplicant tkip
 sys-kernel/linux-firmware   deduplicate redistributable
 sys-auth/seatd              server
 media-libs/libva            utils
+media-sound/cmus            pulseaudio
 
 # workaround to "longjmp causes uninitialized stack frame"
 net-misc/curl               adns
