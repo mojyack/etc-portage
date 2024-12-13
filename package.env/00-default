@@ -18,7 +18,7 @@ media-libs/audiofile        cpp14
 app-text/ghostscript-gpl    ghostscript-bug
 
 # workaround for "libunwind: __unw_add_dynamic_fde: bad fde: FDE is really a CIE" of neovim
-sys-libs/llvm-libunwind     ndebug
+llvm-runtimes/libunwind     ndebug
 
 # workaround for "no template named 'auto_ptr' in namespace 'std'"
 media-libs/gexiv2           cpp14
@@ -40,7 +40,7 @@ media-sound/cmus            set-hostcc
 # https://gitweb.gentoo.org/repo/gentoo.git/commit/?id=127dc03a3c8fa58347375f41795635594a47b2c6 disables lto.
 # which causes a linker error because some llvm static library (e.g. libLLVMSupport.a) is a llvm-ir object.
 # why lld can handle this?
-dev-debug/lldb      force-lld
+llvm-core/lldb              force-lld
 
 # for pgo
 www-client/firefox          sandbox

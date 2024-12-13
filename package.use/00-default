@@ -14,7 +14,7 @@ sys-apps/portage            -rsync-verify
 sys-fs/lvm2                 -readline -thin -udev
 sys-devel/binutils          -pgo
 sys-auth/pambase            -passwdqc
-sys-libs/compiler-rt-sanitizers -asan -cfi -dfsan -gwp-asan -hwasan -libfuzzer -lsan -memprof -msan -orc -safestack -scudo -tsan -ubsan -xray
+llvm-runtimes/compiler-rt-sanitizers -asan -cfi -dfsan -gwp-asan -hwasan -libfuzzer -lsan -memprof -msan -orc -safestack -scudo -tsan -ubsan -xray
 media-libs/libaom           -examples
 sys-apps/debianutils        -installkernel
 net-wireless/wpa_supplicant -crda -fils -hs2-0
@@ -100,7 +100,7 @@ media-sound/audacity        id3tag lv2 sbsms twolame vamp vst alsa ffmpeg flac l
 media-libs/portaudio        alsa
 x11-libs/wxGTK              X
 media-libs/flac             cxx
-sys-libs/llvm-libunwind     static-libs
+llvm-runtimes/libunwind     static-libs
 
 # tesseract
 app-text/tesseract          jpeg png webp
