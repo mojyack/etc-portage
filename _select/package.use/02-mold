@@ -1,1 +1,1 @@
-sys-devel/llvm  binutils-plugin
+llvm-core/llvm  binutils-plugin
