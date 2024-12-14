@@ -1,6 +1,0 @@
-post_src_prepare() {
-    echo "applying libcxx patches"
-    pushd ..
-    patch -p1 < /etc/portage/env/sys-libs/libcxx-remove-noinline.patch || die
-    popd
-}
