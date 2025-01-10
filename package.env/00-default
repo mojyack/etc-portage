@@ -33,6 +33,7 @@ media-plugins/gst-plugins-v4l2 no-incompatible-function-pointer-types
 # needs more stack
 sys-devel/mold              increase-stack-size
 dev-lang/python             increase-stack-size
+media-gfx/gimp              increase-stack-size
 
 # error on non-gcc system
 media-sound/cmus            set-hostcc
