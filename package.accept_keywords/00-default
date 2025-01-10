@@ -1,13 +1,6 @@
 app-i18n/fcitx      ~amd64
 app-i18n/fcitx-gtk  ~amd64
 
-=sys-libs/musl-1.2.4-r1 ~amd64
-
-# python3.12 support
-# FIXME: remove this
->=media-libs/libaom-3.8         ~amd64
->=media-libs/fontconfig-2.15    ~amd64
-
 # media-gfx/gimp
 =media-gfx/gimp-2.99*   **
 
