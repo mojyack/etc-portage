@@ -30,7 +30,7 @@ dev-util/ccache             -static-c++
 media-libs/freetype         harfbuzz cleartype-hinting
 media-libs/harfbuzz         glib truetype
 sys-kernel/gentoo-sources   symlink experimental
-media-gfx/imagemagick       jpeg png webp xml
+media-gfx/imagemagick       jpeg png webp heif xml cxx
 media-sound/sox             flac ogg
 x11-terms/alacritty         wayland
 media-fonts/fontawesome     otf
@@ -42,7 +42,6 @@ dev-libs/elfutils           utils
 dev-vcs/git                 blksha1 curl
 media-libs/libvpx           highbitdepth
 net-fs/nfs-utils            libmount nfsv4
-media-gfx/imagemagick       cxx
 x11-libs/libxkbcommon       wayland
 sys-apps/portage            native-extensions
 media-video/ffmpeg          dav1d
@@ -131,3 +130,6 @@ dev-lang/rust               rust-analyzer rust-src rustfmt llvm-libunwind system
 
 # gnuplot
 sci-visualization/gnuplot   cairo
+
+# imagemagick
+media-libs/libheif          x265
