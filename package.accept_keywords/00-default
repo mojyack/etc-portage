@@ -1,11 +1,6 @@
 app-i18n/fcitx      ~amd64
 app-i18n/fcitx-gtk  ~amd64
 
-# drop llvm-18
-=media-libs/mesa-24.3.2     ~amd64
-=dev-util/intel_clc-24.3.2  ~amd64
-=llvm-core/libclc-19.1.6    ~amd64
-
 # media-gfx/gimp
 =media-gfx/gimp-2.99*   **
 
