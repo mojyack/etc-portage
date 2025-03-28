@@ -3,8 +3,8 @@ app-editors/neovim
 app-i18n/fcitx
 app-i18n/fcitx-gtk
 app-i18n/fcitx5-mikan
-app-misc/ranger
 app-misc/tmux
+app-misc/yazi
 app-portage/portage-utils
 app-shells/zsh
 app-shells/zsh-completions
