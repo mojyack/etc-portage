@@ -2,6 +2,8 @@ app-i18n/fcitx      ~amd64
 app-i18n/fcitx-gtk  ~amd64
 app-misc/yazi       ~amd64
 
+llvm-runtimes/libatomic-stub    ~amd64
+
 # media-gfx/gimp
 =media-gfx/gimp-2.99*   **
 
