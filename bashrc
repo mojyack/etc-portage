@@ -1,4 +1,4 @@
-pre_src_configure() {
+pre_pkg_setup() {
     # $JOBS $LDJOBS and $LINKER are from env/device-config
     MAKEOPTS="$MAKEOPTS -j$JOBS"
     LD="ld.$LINKER"
@@ -16,7 +16,7 @@ pre_src_configure() {
         LDFLAGS="${LDFLAGS} ${C_LTO_FLAGS}"
     fi
 
-    echo "DEBUG: pre_src_configure()"
+    echo "DEBUG: pre_pkg_setup()"
     echo "DEBUG: CC $CC"
     echo "DEBUG: CXX $CXX"
     echo "DEBUG: LD $LD"
