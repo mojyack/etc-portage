@@ -1,4 +1,4 @@
-media-video/mpv             -alsa -uchardet -xv -zlib -libmpv -libplacebo
+media-video/mpv             -alsa -uchardet -xv -zlib -vulkan -libmpv -libplacebo
 app-i18n/fcitx              -autostart -enchant -emoji
 app-i18n/fcitx-gtk          -gtk2 -gtk4 -snooper
 media-sound/audacity        -portmixer
