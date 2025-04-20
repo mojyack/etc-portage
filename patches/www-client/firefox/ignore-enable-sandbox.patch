@@ -1,0 +1,15 @@
+diff --git a/toolkit/moz.configure b/toolkit/moz.configure
+index c4a50c8..73c15ec 100644
+--- a/toolkit/moz.configure
++++ b/toolkit/moz.configure
+@@ -3617,8 +3617,8 @@ option(
+     help="{Enable|Disable} sandboxing support",
+ )
+ 
+-set_config("MOZ_SANDBOX", True, when="--enable-sandbox")
+-set_define("MOZ_SANDBOX", True, when="--enable-sandbox")
++set_config("MOZ_SANDBOX_IGNORE", True, when="--enable-sandbox")
++set_define("MOZ_SANDBOX_IGNORE", True, when="--enable-sandbox")
+ 
+ # Searching of system directories for extensions.
+ # ==============================================================
