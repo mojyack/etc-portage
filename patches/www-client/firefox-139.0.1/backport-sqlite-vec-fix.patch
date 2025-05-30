@@ -1,0 +1,96 @@
+From 0c7e2d7473fdcffe798c99ec60967598cd3de626 Mon Sep 17 00:00:00 2001
+From: Patrycja Rosa <mozcontrib@ptrcnull.me>
+Date: Tue, 13 May 2025 14:25:43 +0000
+Subject: [PATCH] Bug 1964446 - Fix sqlite-vec build on Linux+musl.r=asuth,mak
+
+see also:
+https://phabricator.services.mozilla.com/D247229#8557917
+https://github.com/asg017/sqlite-vec/pull/219
+
+Differential Revision: https://phabricator.services.mozilla.com/D248399
+---
+ .../ext/sqlite-vec/patches/bug1962061.patch   | 18 ---------------
+ .../ext/sqlite-vec/patches/bug1964446.patch   | 23 +++++++++++++++++++
+ .../sqlite3/ext/sqlite-vec/sqlite-vec.c       | 14 -----------
+ 3 files changed, 23 insertions(+), 32 deletions(-)
+ delete mode 100644 third_party/sqlite3/ext/sqlite-vec/patches/bug1962061.patch
+ create mode 100644 third_party/sqlite3/ext/sqlite-vec/patches/bug1964446.patch
+
+diff --git a/third_party/sqlite3/ext/sqlite-vec/patches/bug1962061.patch b/third_party/sqlite3/ext/sqlite-vec/patches/bug1962061.patch
+deleted file mode 100644
+index ac75de727bfd8..0000000000000
+--- a/third_party/sqlite3/ext/sqlite-vec/patches/bug1962061.patch
++++ /dev/null
+@@ -1,18 +0,0 @@
+---- a/sqlite-vec.c
+-+++ b/sqlite-vec.c
+-@@ -65,6 +65,7 @@
+- #ifndef __EMSCRIPTEN__
+- #ifndef __COSMOPOLITAN__
+- #ifndef __wasi__
+-+#ifndef __sun__
+- typedef u_int8_t uint8_t;
+- typedef u_int16_t uint16_t;
+- typedef u_int64_t uint64_t;
+-@@ -72,6 +73,7 @@
+- #endif
+- #endif
+- #endif
+-+#endif
+-
+- typedef int8_t i8;
+- typedef uint8_t u8;
+diff --git a/third_party/sqlite3/ext/sqlite-vec/patches/bug1964446.patch b/third_party/sqlite3/ext/sqlite-vec/patches/bug1964446.patch
+new file mode 100644
+index 0000000000000..c738d3bc5fdc9
+--- /dev/null
++++ b/third_party/sqlite3/ext/sqlite-vec/patches/bug1964446.patch
+@@ -0,0 +1,23 @@
++diff --git a/sqlite-vec.c b/sqlite-vec.c
++index 86378ba..e8e38c9 100644
++--- a/sqlite-vec.c
+++++ b/sqlite-vec.c
++@@ -61,18 +61,6 @@ SQLITE_EXTENSION_INIT3
++ #define LONGDOUBLE_TYPE long double
++ #endif
++ 
++-#ifndef _WIN32
++-#ifndef __EMSCRIPTEN__
++-#ifndef __COSMOPOLITAN__
++-#ifndef __wasi__
++-typedef u_int8_t uint8_t;
++-typedef u_int16_t uint16_t;
++-typedef u_int64_t uint64_t;
++-#endif
++-#endif
++-#endif
++-#endif
++-
++ typedef int8_t i8;
++ typedef uint8_t u8;
++ typedef int16_t i16;
+diff --git a/third_party/sqlite3/ext/sqlite-vec/sqlite-vec.c b/third_party/sqlite3/ext/sqlite-vec/sqlite-vec.c
+index 96612e26d385e..e8e38c940e783 100644
+--- a/third_party/sqlite3/ext/sqlite-vec/sqlite-vec.c
++++ b/third_party/sqlite3/ext/sqlite-vec/sqlite-vec.c
+@@ -61,20 +61,6 @@ SQLITE_EXTENSION_INIT3
+ #define LONGDOUBLE_TYPE long double
+ #endif
+ 
+-#ifndef _WIN32
+-#ifndef __EMSCRIPTEN__
+-#ifndef __COSMOPOLITAN__
+-#ifndef __wasi__
+-#ifndef __sun__
+-typedef u_int8_t uint8_t;
+-typedef u_int16_t uint16_t;
+-typedef u_int64_t uint64_t;
+-#endif
+-#endif
+-#endif
+-#endif
+-#endif
+-
+ typedef int8_t i8;
+ typedef uint8_t u8;
+ typedef int16_t i16;
