@@ -1,0 +1,13 @@
+diff --git a/src/gallium/drivers/panfrost/pan_screen.c b/src/gallium/drivers/panfrost/pan_screen.c
+index 0454f4aa6..fd1e54dd2 100644
+--- a/src/gallium/drivers/panfrost/pan_screen.c
++++ b/src/gallium/drivers/panfrost/pan_screen.c
+@@ -754,7 +754,7 @@ panfrost_init_screen_caps(struct panfrost_screen *screen)
+ 
+    caps->max_vertex_element_src_offset = 0xffff;
+ 
+-   caps->texture_transfer_modes = 0;
++   caps->texture_transfer_modes = PIPE_TEXTURE_TRANSFER_BLIT;
+ 
+    caps->endianness = PIPE_ENDIAN_NATIVE;
+ 
