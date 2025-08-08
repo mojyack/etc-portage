@@ -44,6 +44,8 @@ media-sound/cmus            set-hostcc
 llvm-core/lldb              force-lld
 # duplicate symbol: __llvm_profile_raw_version
 app-arch/xz-utils           force-lld
+# "unknown linker script token" at src/gx_head/guitarix.lds
+media-sound/guitarix        force-lld
 
 # for pgo
 www-client/firefox          sandbox
