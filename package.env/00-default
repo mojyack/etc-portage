@@ -46,6 +46,8 @@ llvm-core/lldb              force-lld
 app-arch/xz-utils           force-lld
 # "unknown linker script token" at src/gx_head/guitarix.lds
 media-sound/guitarix        force-lld
+# unable to handle this LTO object file
+gnome-base/librsvg          force-lld
 
 # for pgo
 www-client/firefox          sandbox
