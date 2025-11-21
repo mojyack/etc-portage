@@ -4,6 +4,9 @@ app-misc/yazi       ~amd64
 
 llvm-runtimes/libatomic-stub    ~amd64
 
+# https://bugs.gentoo.org/964394
+=net-libs/libtirpc-1.3.7-r2 ~amd64
+
 # media-gfx/gimp
 =media-gfx/gimp-2.99*   **
 
