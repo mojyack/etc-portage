@@ -51,3 +51,6 @@ gnome-base/librsvg          force-lld
 
 # for pgo
 www-client/firefox          sandbox
+
+# https://github.com/rust-lang/rust/issues/147902
+dev-lang/rust               force-lld disable-default-lto

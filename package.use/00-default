@@ -27,6 +27,9 @@ media-sound/cmus            -mad -systemd
 # doesn't work with clang
 dev-util/ccache             -static-c++
 
+# https://github.com/rust-lang/rust/issues/147902
+dev-lang/rust               -lto
+
 media-libs/freetype         harfbuzz cleartype-hinting
 media-libs/harfbuzz         glib truetype
 sys-kernel/gentoo-sources   symlink experimental
