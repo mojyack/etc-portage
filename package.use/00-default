@@ -59,6 +59,7 @@ sys-kernel/linux-firmware   deduplicate redistributable
 sys-auth/seatd              server
 media-libs/libva            utils
 media-sound/cmus            pulseaudio
+dev-cpp/eigen               boost
 
 # workaround to "longjmp causes uninitialized stack frame"
 net-misc/curl               adns
