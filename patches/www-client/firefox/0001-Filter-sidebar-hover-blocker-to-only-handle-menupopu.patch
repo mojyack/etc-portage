@@ -1,0 +1,36 @@
+From edc503349a5002df2b300925fcca4061a10fefd2 Mon Sep 17 00:00:00 2001
+From: mojyack <mojyack@gmail.com>
+Date: Sat, 18 Apr 2026 14:58:24 +0900
+Subject: [PATCH 1/3] Filter sidebar hover blocker to only handle menupopup
+ elements
+
+Use a whitelist (menupopup) instead of a blacklist (tooltip) for popup
+events in sidebar expand-on-hover. This prevents non-menu popups from
+incrementing _hoverBlockerCount without a matching decrement, which
+caused the sidebar to stay expanded permanently.
+---
+ browser/components/sidebar/browser-sidebar.js | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/browser/components/sidebar/browser-sidebar.js b/browser/components/sidebar/browser-sidebar.js
+index ae85009ad8f0..7d571cdb3302 100644
+--- a/browser/components/sidebar/browser-sidebar.js
++++ b/browser/components/sidebar/browser-sidebar.js
+@@ -2329,12 +2329,12 @@ var SidebarController = {
+     switch (e.type) {
+       case "popupshown":
+         /* Temporarily remove MousePosTracker listener when a context menu is open */
+-        if (e.composedTarget.tagName !== "tooltip") {
++        if (e.composedTarget.tagName === "menupopup") {
+           this._addHoverStateBlocker();
+         }
+         break;
+       case "popuphidden":
+-        if (e.composedTarget.tagName !== "tooltip") {
++        if (e.composedTarget.tagName === "menupopup") {
+           await this._removeHoverStateBlocker();
+         }
+         break;
+-- 
+2.52.0
+

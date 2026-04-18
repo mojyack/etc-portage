@@ -1,0 +1,113 @@
+From b33b489854b1e3009f6b388385f5b195659ccef2 Mon Sep 17 00:00:00 2001
+From: mojyack <mojyack@gmail.com>
+Date: Sat, 18 Apr 2026 14:38:05 +0900
+Subject: [PATCH 2/3] Skip synthetic mousemove through Wayland popups with
+ unreliable screen position
+
+On Wayland, popup widgets may not have their screen position confirmed
+by the compositor when a synthetic mousemove event fires after layout
+changes. WidgetToScreenOffset() returns stale values in this case,
+producing bogus screenX/Y coordinates that break hover state tracking.
+
+Add nsIWidget::IsWidgetScreenPositionReliable() (default true) and
+override it in nsWindow to return false when the popup is waiting for
+a move-to-rect callback or hasn't been mapped yet. Use this in
+PresShell::ProcessSynthMouseOrPointerMoveEvent() to skip dispatching
+through such popups, falling back to the root widget instead.
+---
+ layout/base/PresShell.cpp | 25 ++++++++++++++++---------
+ widget/gtk/nsWindow.cpp   | 10 ++++++++++
+ widget/gtk/nsWindow.h     |  1 +
+ widget/nsIWidget.h        |  7 +++++++
+ 4 files changed, 34 insertions(+), 9 deletions(-)
+
+diff --git a/layout/base/PresShell.cpp b/layout/base/PresShell.cpp
+index d96107f892f0..60184250bd5b 100644
+--- a/layout/base/PresShell.cpp
++++ b/layout/base/PresShell.cpp
+@@ -5901,15 +5901,22 @@ void PresShell::ProcessSynthMouseOrPointerMoveEvent(
+                      LayoutDeviceIntPoint::FromAppUnitsToNearest(
+                          aPointerInfo.mLastRefPointInRootDoc, APD));
+   if (popupFrame) {
+-    pointShell = popupFrame->PresShell();
+-    widget = popupFrame->GetWidget();
+-    widgetAPD = popupFrame->PresContext()->AppUnitsPerDevPixel();
+-    refpoint = aPointerInfo.mLastRefPointInRootDoc;
+-    DebugOnly<nsLayoutUtils::TransformResult> result =
+-        nsLayoutUtils::TransformPoint(
+-            RelativeTo{GetRootFrame(), ViewportType::Visual},
+-            RelativeTo{popupFrame, ViewportType::Layout}, refpoint);
+-    MOZ_ASSERT(result == nsLayoutUtils::TRANSFORM_SUCCEEDED);
++    nsCOMPtr<nsIWidget> popupWidget = popupFrame->GetWidget();
++    // On Wayland, a popup widget may not have its screen position confirmed
++    // by the compositor yet when the synthetic mousemove fires. Dispatching
++    // through such a widget produces bogus screenX/Y values because
++    // WidgetToScreenOffset() returns a stale position.
++    if (popupWidget && popupWidget->IsWidgetScreenPositionReliable()) {
++      pointShell = popupFrame->PresShell();
++      widget = popupWidget;
++      widgetAPD = popupFrame->PresContext()->AppUnitsPerDevPixel();
++      refpoint = aPointerInfo.mLastRefPointInRootDoc;
++      DebugOnly<nsLayoutUtils::TransformResult> result =
++          nsLayoutUtils::TransformPoint(
++              RelativeTo{GetRootFrame(), ViewportType::Visual},
++              RelativeTo{popupFrame, ViewportType::Layout}, refpoint);
++      MOZ_ASSERT(result == nsLayoutUtils::TRANSFORM_SUCCEEDED);
++    }
+   }
+   if (!widget) {
+     widget = ownWidget;
+diff --git a/widget/gtk/nsWindow.cpp b/widget/gtk/nsWindow.cpp
+index eafc1c4942b8..a7ccd0e58642 100644
+--- a/widget/gtk/nsWindow.cpp
++++ b/widget/gtk/nsWindow.cpp
+@@ -3793,6 +3793,16 @@ LayoutDeviceIntPoint nsWindow::WidgetToScreenOffset() {
+   return ToLayoutDevicePixels(mClientArea.TopLeft());
+ }
+ 
++bool nsWindow::IsWidgetScreenPositionReliable() {
++  if (mWaitingForMoveToRectCallback) {
++    return false;
++  }
++  if (mWindowType == WindowType::Popup && !mIsMapped) {
++    return false;
++  }
++  return true;
++}
++
+ DesktopIntPoint nsWindow::WidgetToScreenOffsetUnscaled() {
+   return DesktopIntPoint(mClientArea.x, mClientArea.y);
+ }
+diff --git a/widget/gtk/nsWindow.h b/widget/gtk/nsWindow.h
+index 7a2b305f6fc2..aa9c369ab789 100644
+--- a/widget/gtk/nsWindow.h
++++ b/widget/gtk/nsWindow.h
+@@ -264,6 +264,7 @@ class nsWindow final : public nsIWidget {
+   void SetWindowClass(const nsAString& xulWinType, const nsAString& xulWinClass,
+                       const nsAString& xulWinName) override;
+   LayoutDeviceIntPoint WidgetToScreenOffset() override;
++  bool IsWidgetScreenPositionReliable() override;
+   DesktopIntPoint WidgetToScreenOffsetUnscaled();
+   void CaptureRollupEvents(bool aDoCapture) override;
+   [[nodiscard]] nsresult GetAttention(int32_t aCycleCount) override;
+diff --git a/widget/nsIWidget.h b/widget/nsIWidget.h
+index 08c11cee4933..3538b66938c8 100644
+--- a/widget/nsIWidget.h
++++ b/widget/nsIWidget.h
+@@ -1430,6 +1430,13 @@ class nsIWidget : public nsSupportsWeakReference {
+    */
+   virtual LayoutDeviceIntPoint WidgetToScreenOffset() = 0;
+ 
++  /**
++   * Return whether this widget's screen position is reliable.
++   * On Wayland, popup widgets may not have their position confirmed
++   * by the compositor yet, making WidgetToScreenOffset() unreliable.
++   */
++  virtual bool IsWidgetScreenPositionReliable() { return true; }
++
+   /**
+    * The same as WidgetToScreenOffset(), except in the case of
+    * PuppetWidget where this method omits the chrome offset.
+-- 
+2.52.0
+

@@ -1,0 +1,76 @@
+From 82de1ba241f3dc6008959e78ddbcdfcdcd298ef5 Mon Sep 17 00:00:00 2001
+From: mojyack <mojyack@gmail.com>
+Date: Sat, 18 Apr 2026 15:04:16 +0900
+Subject: [PATCH 3/3] Harden sidebar hover blocker against Wayland coordinate
+ issues
+
+Listen for popupshowing instead of popupshown to remove the
+MousePosTracker listener before the popup surface is created,
+preventing bogus Wayland coordinates from triggering onMouseLeave.
+
+Simplify _removeHoverStateBlocker to just re-add the listener without
+checking hover state, since coordinates at popup-close time can also
+be incorrect on Wayland. The next real mouse event will trigger
+onMouseLeave naturally if the mouse is outside the launcher.
+---
+ browser/components/sidebar/browser-sidebar.js | 23 ++++++-------------
+ 1 file changed, 7 insertions(+), 16 deletions(-)
+
+diff --git a/browser/components/sidebar/browser-sidebar.js b/browser/components/sidebar/browser-sidebar.js
+index 7d571cdb3302..45a0fa133f84 100644
+--- a/browser/components/sidebar/browser-sidebar.js
++++ b/browser/components/sidebar/browser-sidebar.js
+@@ -1428,18 +1428,10 @@ var SidebarController = {
+ 
+   async _removeHoverStateBlocker() {
+     if (this._hoverBlockerCount == 1) {
+-      let isHovered = this._checkIsHoveredOverLauncher();
+-
+-      // Collapse sidebar if needed
+-      if (this._state.launcherExpanded && !isHovered) {
+-        if (this._animationEnabled && !window.gReduceMotion) {
+-          this._animateSidebarMain();
+-        }
+-        this._state.launcherExpanded = false;
+-        await this.waitUntilStable();
+-      }
+-
+-      // Re-add MousePosTracker listener
++      // Re-add MousePosTracker listener and let it handle collapse naturally
++      // via onMouseLeave on the next mouse event. We avoid checking the hover
++      // state here because mouse coordinates can be transiently incorrect on
++      // Wayland when popups open or close.
+       MousePosTracker.addListener(this);
+     }
+     if (this._hoverBlockerCount > 0) {
+@@ -2327,8 +2319,7 @@ var SidebarController = {
+ 
+   async handleEvent(e) {
+     switch (e.type) {
+-      case "popupshown":
+-        /* Temporarily remove MousePosTracker listener when a context menu is open */
++      case "popupshowing":
+         if (e.composedTarget.tagName === "menupopup") {
+           this._addHoverStateBlocker();
+         }
+@@ -2357,7 +2348,7 @@ var SidebarController = {
+       if (!isDragEnded) {
+         await this.setLauncherCollapsedWidth();
+       }
+-      document.addEventListener("popupshown", this);
++      document.addEventListener("popupshowing", this);
+       document.addEventListener("popuphidden", this);
+       // Reset user-preferred height
+       this.sidebarMain.buttonsWrapper.style.height = this._state
+@@ -2370,7 +2361,7 @@ var SidebarController = {
+       if (!this.mouseOverTask?.isFinalized) {
+         this.mouseOverTask?.finalize();
+       }
+-      document.removeEventListener("popupshown", this);
++      document.removeEventListener("popupshowing", this);
+       document.removeEventListener("popuphidden", this);
+       // Add back user-preferred height if defined
+       if (
+-- 
+2.52.0
+
