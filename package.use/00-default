@@ -23,6 +23,7 @@ net-fs/nfs-utils            -nfsv3
 net-misc/chrony             -caps -nettle -nts -phc -pps -readline -refclock -sechash
 sys-kernel/linux-firmware   -initramfs
 media-sound/cmus            -mad -systemd
+net-libs/gnutls             -post-quantum
 
 # doesn't work with clang
 dev-util/ccache             -static-c++
