@@ -51,6 +51,8 @@ app-arch/xz-utils           force-lld
 media-sound/guitarix        force-lld
 # unable to handle this LTO object file
 gnome-base/librsvg          force-lld
+# otherwise tc-ld-force-bfd
+sci-libs/blas-lapack-aux-wrapper force-lld
 
 # for pgo
 www-client/firefox          sandbox
