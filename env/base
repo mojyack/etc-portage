@@ -6,3 +6,16 @@ FFLAGS="$COMMON_FLAGS"
 RUSTFLAGS="-C opt-level=3 $RUSTOPTFLAGS"
 
 LDFLAGS="-Wl,--as-needed -Wl,--undefined-version"
+
+LINGUAS="en"
+L10N="en"
+INSTALL_MASK="
+	/usr/share/man
+	/usr/share/doc
+	/usr/share/gtk-doc
+	/usr/share/info
+	/usr/lib/*/share/man
+	/usr/lib/*/share/doc
+	/usr/lib/rust/*/share/man
+	/usr/lib/rust/*/share/doc
+"
