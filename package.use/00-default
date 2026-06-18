@@ -3,7 +3,7 @@ app-i18n/fcitx              -autostart -enchant -emoji
 app-i18n/fcitx-gtk          -gtk2 -gtk4 -snooper
 media-sound/audacity        -portmixer
 media-gfx/gimp              -udev
-gui-wm/sway                 -swaynag
+gui-wm/sway                 -swaynag --swaybar
 net-fs/samba                -regedit -system-mitkrb5
 sys-libs/talloc             -python
 sys-apps/util-linux         -cramfs -hardlink -logger 

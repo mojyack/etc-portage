@@ -14,6 +14,7 @@ gui-apps/grim
 gui-apps/slurp
 gui-apps/swaybg
 gui-apps/swaylock
+gui-apps/swaybarpp
 gui-apps/wl-clipboard
 gui-wm/sway
 media-fonts/cascadia-code
