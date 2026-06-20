@@ -1,2 +1,0 @@
-CFLAGS="${CFLAGS} -Wl,-unresolved-symbols=ignore-in-object-files"
-CXXFLAGS="${CXXFLAGS} -Wl,-unresolved-symbols=ignore-in-object-files"

@@ -26,9 +26,6 @@ llvm-runtimes/libunwind     ndebug
 # workaround for "no template named 'auto_ptr' in namespace 'std'"
 media-libs/gexiv2           cpp14
 
-# fail static linking
-app-emulation/qemu          ignore-unresolved
-
 # c compat
 sys-apps/runit              no-implicit-function-declaration no-implicit-int
 media-plugins/gst-plugins-v4l2 no-incompatible-function-pointer-types
