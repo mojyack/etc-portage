@@ -132,7 +132,7 @@ x11-libs/gtk+               wayland
 # rust
 virtual/rust                rustfmt
 dev-lang/rust-bin           rustfmt
-dev-lang/rust               rust-analyzer rust-src rustfmt llvm-libunwind system-llvm
+dev-lang/rust               rust-analyzer rust-src rustfmt llvm-libunwind system-llvm jemalloc
 
 # gnuplot
 sci-visualization/gnuplot   cairo
