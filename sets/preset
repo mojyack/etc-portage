@@ -8,13 +8,14 @@ app-misc/yazi
 app-portage/portage-utils
 app-shells/zsh
 app-shells/zsh-completions
+dev-libs/jemalloc
 dev-python/pynvim
 dev-vcs/git
 gui-apps/grim
 gui-apps/slurp
+gui-apps/swaybarpp
 gui-apps/swaybg
 gui-apps/swaylock
-gui-apps/swaybarpp
 gui-apps/wl-clipboard
 gui-wm/sway
 media-fonts/cascadia-code
