@@ -1,0 +1,4 @@
+sys-apps/fd         rustc-offload
+app-misc/yazi       rustc-offload
+x11-terms/alacritty rustc-offload
+www-client/firefox  rustc-offload 

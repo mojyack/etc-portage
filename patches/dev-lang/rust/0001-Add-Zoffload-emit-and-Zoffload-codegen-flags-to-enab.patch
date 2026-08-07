@@ -1,0 +1,965 @@
+From 3e3321bf7c8169a387cc1cb99365ca107dc3c9e9 Mon Sep 17 00:00:00 2001
+From: mojyack <mojyack@gmail.com>
+Date: Fri, 7 Aug 2026 15:14:58 +0900
+Subject: [PATCH] Add -Zoffload-emit and -Zoffload-codegen flags to enable
+ distributed compilation
+
+This implements the necessary compiler flags to split the compilation
+pipeline into three distinct phases for distributed compilation:
+- `-Zoffload-emit`: Halts compilation after frontend evaluation and
+  serializes all CGUs (including the allocator module) and rlink metadata.
+- `-Zoffload-codegen`: Restores codegen state from the serialized rlink
+  metadata and CGUs to independently execute the LLVM codegen phase.
+- `-Zlink-only`: Native host linkage phase using the resulting object
+  files.
+---
+ compiler/rustc_codegen_llvm/src/back/mod.rs   |   1 +
+ .../src/back/offload_codegen.rs               | 315 ++++++++++++++++++
+ compiler/rustc_codegen_llvm/src/lib.rs        |   6 +-
+ compiler/rustc_codegen_ssa/src/back/mod.rs    |   1 +
+ .../rustc_codegen_ssa/src/back/offload.rs     | 164 +++++++++
+ compiler/rustc_codegen_ssa/src/back/write.rs  | 127 ++++++-
+ .../rustc_codegen_ssa/src/traits/backend.rs   |   9 +
+ compiler/rustc_driver_impl/src/lib.rs         |   7 +
+ compiler/rustc_interface/src/queries.rs       |  20 ++
+ compiler/rustc_session/src/options.rs         |  12 +
+ 10 files changed, 650 insertions(+), 12 deletions(-)
+ create mode 100644 compiler/rustc_codegen_llvm/src/back/offload_codegen.rs
+ create mode 100644 compiler/rustc_codegen_ssa/src/back/offload.rs
+
+diff --git a/compiler/rustc_codegen_llvm/src/back/mod.rs b/compiler/rustc_codegen_llvm/src/back/mod.rs
+index 6cb89f80ab8..80a2665c119 100644
+--- a/compiler/rustc_codegen_llvm/src/back/mod.rs
++++ b/compiler/rustc_codegen_llvm/src/back/mod.rs
+@@ -1,5 +1,6 @@
+ pub(crate) mod archive;
+ pub(crate) mod lto;
++pub(crate) mod offload_codegen;
+ pub(crate) mod owned_target_machine;
+ mod profiling;
+ pub(crate) mod write;
+diff --git a/compiler/rustc_codegen_llvm/src/back/offload_codegen.rs b/compiler/rustc_codegen_llvm/src/back/offload_codegen.rs
+new file mode 100644
+index 00000000000..4d44a0bc369
+--- /dev/null
++++ b/compiler/rustc_codegen_llvm/src/back/offload_codegen.rs
+@@ -0,0 +1,315 @@
++//! Backend offload, resume side (Option B).
++//!
++//! Implements `-Zoffload-codegen=<dir>`: pick up the unoptimized bitcode and serialized
++//! crate info that an earlier `-Zoffload-emit` run left in `<dir>`, run the LLVM
++//! optimization + machine-code pipeline on each codegen unit, and link — all without
++//! running the frontend.
++//!
++//! This is invoked with the *same* target and codegen flags as the emit step, so the
++//! `Session` already carries everything needed to rebuild an equivalent `CodegenContext`
++//! and `ModuleConfig`. The only things that cannot be recomputed without the frontend —
++//! the crate info, encoded metadata and output filenames — are read back from the
++//! `offload.rlink` file (the same serialization used by `-Zno-link`).
++
++use std::ffi::CString;
++use std::path::Path;
++use std::sync::Arc;
++
++use rustc_abi::Size;
++use rustc_codegen_ssa::back::link;
++use rustc_codegen_ssa::back::write::{
++    CodegenContext, ComputedLtoType, ModuleConfig, SharedEmitter, compute_per_cgu_lto_type,
++    do_thin_lto,
++};
++use rustc_codegen_ssa::traits::ExtraBackendMethods;
++use rustc_codegen_ssa::{
++    CodegenErrors, CodegenResults, CompiledModule, CrateInfo, ModuleCodegen, ModuleKind,
++};
++use rustc_session::Session;
++use rustc_session::config::Lto;
++
++use crate::back::lto::ModuleBuffer;
++use crate::{LlvmCodegenBackend, ModuleLlvm, back, llvm_util};
++
++/// A codegen unit to resume, as listed in `offload.cgus`.
++struct OffloadCgu {
++    name: String,
++    kind: ModuleKind,
++    bitcode: std::path::PathBuf,
++}
++
++fn read_cgu_list(sess: &Session, dir: &Path) -> Vec<OffloadCgu> {
++    let path = dir.join("offload.cgus");
++    let contents = std::fs::read_to_string(&path).unwrap_or_else(|err| {
++        sess.dcx().fatal(format!("failed to read offload CGU list `{}`: {err}", path.display()))
++    });
++    contents
++        .lines()
++        .filter(|l| !l.trim().is_empty())
++        .map(|line| {
++            let mut fields = line.split('\t');
++            let kind = match fields.next() {
++                Some("regular") => ModuleKind::Regular,
++                Some("allocator") => ModuleKind::Allocator,
++                other => sess.dcx().fatal(format!("invalid CGU kind in offload list: {other:?}")),
++            };
++            let name = fields
++                .next()
++                .unwrap_or_else(|| sess.dcx().fatal("malformed offload CGU list entry"))
++                .to_string();
++            let bitcode = fields
++                .next()
++                .unwrap_or_else(|| sess.dcx().fatal("malformed offload CGU list entry"))
++                .into();
++            OffloadCgu { name, kind, bitcode }
++        })
++        .collect()
++}
++
++/// Build a `CodegenContext` equivalent to the one the normal pipeline would build, but
++/// from the `Session` alone (no `TyCtxt`). See the module docs for why this is sound.
++//
++// `bad_opt_access`: the lint steers towards `TyCtxt::crate_types`, but the whole point of
++// this path is that there is no `TyCtxt`; the command line's `--crate-type` (mirrored from
++// the emit step) is the source of truth here.
++#[allow(rustc::bad_opt_access)]
++fn build_codegen_context(
++    backend: &LlvmCodegenBackend,
++    sess: &Session,
++    outputs: Arc<rustc_session::config::OutputFilenames>,
++) -> CodegenContext {
++    let crate_types = sess.opts.crate_types.clone();
++
++    let module_config =
++        Arc::new(ModuleConfig::new_offload(ModuleKind::Regular, sess, &crate_types, false));
++
++    // `-Zoffload-codegen` only targets the common (non-size) optimization levels for now;
++    // `backend_optimization_level` reduces to `sess.opts.optimize` there (the size levels
++    // additionally consult per-item `#[optimize]` attrs, which need the frontend).
++    let opt_level = sess.opts.optimize;
++    let target_features = llvm_util::global_llvm_features(sess, false);
++
++    let msvc_imps_needed = sess.target.is_like_windows
++        && (sess.lto() == Lto::Thin
++            || crate_types.contains(&rustc_session::config::CrateType::Rlib));
++
++    CodegenContext {
++        lto: sess.lto(),
++        use_linker_plugin_lto: sess.opts.cg.linker_plugin_lto.enabled(),
++        dylib_lto: sess.opts.unstable_opts.dylib_lto,
++        prefer_dynamic: sess.opts.cg.prefer_dynamic,
++        save_temps: sess.opts.cg.save_temps,
++        fewer_names: sess.fewer_names(),
++        time_trace: sess.opts.unstable_opts.llvm_time_trace,
++        crate_types,
++        output_filenames: outputs,
++        invocation_temp: sess.invocation_temp.clone(),
++        module_config,
++        opt_level,
++        backend_features: target_features,
++        msvc_imps_needed,
++        is_pe_coff: sess.target.is_like_windows,
++        target_can_use_split_dwarf: sess.target_can_use_split_dwarf(),
++        target_arch: sess.target.arch.to_string(),
++        target_is_like_darwin: sess.target.is_like_darwin,
++        target_is_like_aix: sess.target.is_like_aix,
++        target_is_like_gpu: sess.target.is_like_gpu,
++        split_debuginfo: sess.split_debuginfo(),
++        split_dwarf_kind: sess.opts.unstable_opts.split_dwarf_kind,
++        pointer_size: Size::from_bits(sess.target.pointer_width),
++        remark: sess.opts.cg.remark.clone(),
++        remark_dir: sess.opts.unstable_opts.remark_dir.clone(),
++        incr_comp_session_dir: None,
++        // Parallelize the backend: matters a lot for ThinLTO, which optimizes+codegens many
++        // modules per crate (the final whole-program crate especially). Mirrors the normal
++        // pipeline's choice.
++        parallel: backend.supports_parallel() && !sess.opts.unstable_opts.no_parallel_backend,
++        offload_emit: None,
++    }
++}
++
++/// Resume one codegen unit: parse its unoptimized bitcode back into a module, then run the
++/// same optimize + codegen steps the normal pipeline runs.
++fn codegen_one_cgu(
++    backend: &LlvmCodegenBackend,
++    sess: &Session,
++    cgcx: &CodegenContext,
++    cgu: &OffloadCgu,
++    allocator_config: &ModuleConfig,
++    shared_emitter: SharedEmitter,
++) -> CompiledModule {
++    let dcx = rustc_errors::DiagCtxt::new(Box::new(shared_emitter.clone()));
++    let dcx = dcx.handle();
++
++    let bitcode = std::fs::read(&cgu.bitcode).unwrap_or_else(|err| {
++        dcx.fatal(format!("failed to read offload bitcode `{}`: {err}", cgu.bitcode.display()))
++    });
++
++    let name = CString::new(cgu.name.clone()).unwrap();
++    let tm_factory = backend.target_machine_factory(sess, cgcx.opt_level, &cgcx.backend_features);
++    let module_llvm = ModuleLlvm::parse(cgcx, tm_factory, &name, &bitcode, dcx);
++    let mut module =
++        ModuleCodegen { name: cgu.name.clone(), module_llvm, kind: cgu.kind, thin_lto_buffer: None };
++
++    let config = match cgu.kind {
++        ModuleKind::Regular => &cgcx.module_config,
++        ModuleKind::Allocator => allocator_config,
++    };
++
++    back::write::optimize(cgcx, &sess.prof, &shared_emitter, &mut module, config);
++    back::write::codegen(cgcx, &sess.prof, &shared_emitter, module, config)
++}
++
++/// Resume a ThinLTO compilation (`-Clto=thin`). For each local CGU we parse the bitcode
++/// and run the per-module pre-link optimization, then hand all the modules to the existing
++/// `do_thin_lto`, which does the thin-link (combining with the upstream rlibs' bitcode) and
++/// the per-module import + optimize + codegen. All of this — the heavy part of ThinLTO —
++/// runs here on the build machine; only the final link stays on the host.
++fn thin_lto_codegen(
++    backend: &LlvmCodegenBackend,
++    cgcx: &CodegenContext,
++    sess: &Session,
++    dir: &Path,
++    cgus: &[OffloadCgu],
++    crate_info: &CrateInfo,
++    allocator_config: &ModuleConfig,
++    shared_emitter: SharedEmitter,
++) -> Vec<CompiledModule> {
++    // The exported-symbol set is derived from the frontend, so the emit step serialized it.
++    let sym_path = dir.join("lto-symbols");
++    let exported: Vec<String> = std::fs::read_to_string(&sym_path)
++        .unwrap_or_else(|err| {
++            sess.dcx().fatal(format!("failed to read `{}`: {err}", sym_path.display()))
++        })
++        .lines()
++        .filter(|l| !l.is_empty())
++        .map(str::to_string)
++        .collect();
++
++    // The upstream rlibs whose bitcode participates in LTO — recomputed from the crate info
++    // (no `TyCtxt` needed), exactly as `start_executing_work` does.
++    let mut rlib_files = Vec::new();
++    let _ = link::each_linked_rlib(crate_info, None, &mut |cnum, path| {
++        if !link::ignored_for_lto(sess, crate_info, cnum) {
++            rlib_files.push(path.to_path_buf());
++        }
++    });
++
++    // Parse + pre-link-optimize each local CGU and route it like the normal coordinator.
++    let mut needs_thin: Vec<(String, ModuleBuffer)> = Vec::new();
++    let mut compiled: Vec<CompiledModule> = Vec::new();
++    for cgu in cgus {
++        let dcx = rustc_errors::DiagCtxt::new(Box::new(shared_emitter.clone()));
++        let dcx = dcx.handle();
++
++        let bitcode = std::fs::read(&cgu.bitcode).unwrap_or_else(|err| {
++            dcx.fatal(format!("failed to read offload bitcode `{}`: {err}", cgu.bitcode.display()))
++        });
++        let name = CString::new(cgu.name.clone()).unwrap();
++        let tm_factory = backend.target_machine_factory(sess, cgcx.opt_level, &cgcx.backend_features);
++        let module_llvm = ModuleLlvm::parse(cgcx, tm_factory, &name, &bitcode, dcx);
++        let mut module = ModuleCodegen {
++            name: cgu.name.clone(),
++            module_llvm,
++            kind: cgu.kind,
++            thin_lto_buffer: None,
++        };
++        let config = match cgu.kind {
++            ModuleKind::Regular => &cgcx.module_config,
++            ModuleKind::Allocator => allocator_config,
++        };
++
++        back::write::optimize(cgcx, &sess.prof, &shared_emitter, &mut module, config);
++        match compute_per_cgu_lto_type(&cgcx.lto, cgcx.use_linker_plugin_lto, &cgcx.crate_types) {
++            ComputedLtoType::Thin => needs_thin.push((module.name.clone(), crate::back::lto::ModuleBuffer::new(module.module_llvm.llmod(), true))),
++            ComputedLtoType::No => compiled.push(back::write::codegen(cgcx, &sess.prof, &shared_emitter, module, config)),
++            ComputedLtoType::Fat => {
++                dcx.fatal("backend offload of fat LTO (`-Clto=fat`) is not supported")
++            }
++        }
++    }
++
++    let tm_factory = backend.target_machine_factory(sess, cgcx.opt_level, &cgcx.backend_features);
++    // Thin-link + per-module import/optimize/codegen (the offloaded heavy lifting).
++    compiled.extend(do_thin_lto::<LlvmCodegenBackend>(cgcx, &sess.prof, shared_emitter, tm_factory, Arc::new(exported), rlib_files, needs_thin, Vec::new()));
++    compiled
++}
++
++pub(crate) fn run(backend: &LlvmCodegenBackend, sess: &Session, dir: &Path) {
++    // Read back everything the frontend produced.
++    let cgus = read_cgu_list(sess, dir);
++
++    let rlink_path = dir.join("offload.rlink");
++    let rlink_data = std::fs::read(&rlink_path).unwrap_or_else(|err| {
++        sess.dcx().fatal(format!("failed to read `{}`: {err}", rlink_path.display()))
++    });
++    let (mut codegen_results, metadata, outputs) =
++        match CodegenResults::deserialize_rlink(sess, rlink_data) {
++            Ok(triple) => triple,
++            Err(err) => {
++                let reason = match err {
++                    CodegenErrors::WrongFileType => "not an offload rlink file".to_string(),
++                    CodegenErrors::EmptyVersionNumber => "empty version number".to_string(),
++                    CodegenErrors::EncodingVersionMismatch { version_array, rlink_version } => {
++                        format!("rlink format version mismatch: {rlink_version} vs {version_array}")
++                    }
++                    CodegenErrors::RustcVersionMismatch { rustc_version } => format!(
++                        "rustc version mismatch: emit step used {rustc_version}, this is {}",
++                        sess.cfg_version
++                    ),
++                    CodegenErrors::CorruptFile => "corrupt file".to_string(),
++                };
++                sess.dcx().fatal(format!("failed to read `{}`: {reason}", rlink_path.display()))
++            }
++        };
++    let outputs = Arc::new(outputs);
++
++    let (shared_emitter, shared_emitter_main) = SharedEmitter::new();
++    let cgcx = build_codegen_context(backend, sess, Arc::clone(&outputs));
++
++    let allocator_config =
++        Arc::new(ModuleConfig::new_offload(ModuleKind::Allocator, sess, &cgcx.crate_types, false));
++
++    if sess.lto() == Lto::Thin {
++        // ThinLTO: the expensive cross-module optimization, offloaded here. `codegen_results`
++        // carries empty modules from the emit step; fill them with the LTO output. ThinLTO
++        // folds every module (incl. the allocator) into `modules`.
++        codegen_results.modules = thin_lto_codegen(backend, &cgcx, sess, dir, &cgus, &codegen_results.crate_info, &allocator_config, shared_emitter.clone());
++    } else {
++        // Optimize + codegen each CGU. Runs synchronously; parallelism is a later refinement.
++        for cgu in &cgus {
++            let compiled = codegen_one_cgu(backend, sess, &cgcx, cgu, &allocator_config, shared_emitter.clone());
++            match cgu.kind {
++                ModuleKind::Regular => codegen_results.modules.push(compiled),
++                ModuleKind::Allocator => codegen_results.allocator_module = Some(compiled),
++            }
++        }
++    }
++
++    // Surface any diagnostics the LLVM backend emitted, then bail if any were errors.
++    shared_emitter_main.check(sess, false);
++    sess.dcx().abort_if_errors();
++
++    // Deterministic module order, matching the normal coordinator.
++    codegen_results.modules.sort_by(|a, b| a.name.cmp(&b.name));
++
++    // distcc-style split: with `-Zno-link`, stop after producing the object files and
++    // serialize the now-complete `CodegenResults` to an `.rlink`. The (cheap, fully
++    // transparent) final link is then done back on the host with `rustc -Zlink-only`,
++    // using its native linker, sysroot and dependency libraries. Without `-Zno-link` we
++    // link here, reusing the crate info / metadata / outputs from the emit step.
++    if sess.opts.unstable_opts.no_link {
++        // Write the rlink to a fixed name inside the offload dir (rather than the usual
++        // `<out>.rlink`) so the host-side wrapper can find it deterministically for the
++        // `-Zlink-only` step without having to reconstruct the output filestem.
++        let rlink_file = dir.join("codegen.rlink");
++        CodegenResults::serialize_rlink(sess, &rlink_file, &codegen_results, &metadata, &outputs)
++            .unwrap_or_else(|err| {
++                sess.dcx()
++                    .fatal(format!("failed to write `{}`: {err}", rlink_file.display()))
++            });
++    } else {
++        use rustc_codegen_ssa::traits::CodegenBackend;
++        backend.link(sess, codegen_results, metadata, &outputs);
++    }
++}
+diff --git a/compiler/rustc_codegen_llvm/src/lib.rs b/compiler/rustc_codegen_llvm/src/lib.rs
+index 6f8451b6c01..77f03848271 100644
+--- a/compiler/rustc_codegen_llvm/src/lib.rs
++++ b/compiler/rustc_codegen_llvm/src/lib.rs
+@@ -20,7 +20,7 @@
+ use std::any::Any;
+ use std::ffi::CStr;
+ use std::mem::ManuallyDrop;
+-use std::path::PathBuf;
++use std::path::{Path, PathBuf};
+ 
+ use back::owned_target_machine::OwnedTargetMachine;
+ use back::write::{create_informational_target_machine, create_target_machine};
+@@ -411,6 +411,10 @@ fn link(
+             self.name(),
+         );
+     }
++
++    fn offload_codegen(&self, sess: &Session, dir: &Path) {
++        back::offload_codegen::run(self, sess, dir);
++    }
+ }
+ 
+ pub struct ModuleLlvm {
+diff --git a/compiler/rustc_codegen_ssa/src/back/mod.rs b/compiler/rustc_codegen_ssa/src/back/mod.rs
+index 8d1adb99930..fa8307b0c61 100644
+--- a/compiler/rustc_codegen_ssa/src/back/mod.rs
++++ b/compiler/rustc_codegen_ssa/src/back/mod.rs
+@@ -9,6 +9,7 @@
+ pub(crate) mod linker;
+ pub mod lto;
+ pub mod metadata;
++pub mod offload;
+ pub(crate) mod rpath;
+ pub mod symbol_export;
+ pub mod write;
+diff --git a/compiler/rustc_codegen_ssa/src/back/offload.rs b/compiler/rustc_codegen_ssa/src/back/offload.rs
+new file mode 100644
+index 00000000000..77d00a558f6
+--- /dev/null
++++ b/compiler/rustc_codegen_ssa/src/back/offload.rs
+@@ -0,0 +1,164 @@
++//! Backend offload, emit side (Option A).
++//!
++//! When `-Zoffload-emit=<dir>` is given, the frontend runs normally and each codegen
++//! unit is lowered to *unoptimized* LLVM bitcode, which is written into `<dir>` together
++//! with a manifest describing everything the backend needs to resume optimization and
++//! machine-code generation on another machine (Option B, `-Zoffload-codegen=<manifest>`).
++//!
++//! The cut point is the boundary of `WorkItem::Optimize`: modules arrive fully codegened
++//! but unoptimized, exactly the state that serializes cleanly to bitcode. See
++//! `execute_optimize_work_item` in `back/write.rs`.
++
++use std::fmt::Write as _;
++use std::path::{Path, PathBuf};
++
++use rustc_session::Session;
++use rustc_session::config::{OutFileName, OutputFilenames, OutputType};
++
++use crate::ModuleKind;
++
++/// One codegen unit whose unoptimized bitcode has been written out for offload.
++pub struct OffloadCgu {
++    pub name: String,
++    pub kind: ModuleKind,
++    /// Path of the written bitcode file (inside the offload directory).
++    pub bitcode: PathBuf,
++}
++
++fn module_kind_str(kind: ModuleKind) -> &'static str {
++    match kind {
++        ModuleKind::Regular => "regular",
++        ModuleKind::Allocator => "allocator",
++    }
++}
++
++/// Minimal JSON string escaping (enough for paths and identifiers on the targets we care
++/// about). Avoids pulling a serialization dependency into this crate for the manifest.
++fn json_escape(s: &str) -> String {
++    let mut out = String::with_capacity(s.len() + 2);
++    for c in s.chars() {
++        match c {
++            '"' => out.push_str("\\\""),
++            '\\' => out.push_str("\\\\"),
++            '\n' => out.push_str("\\n"),
++            '\r' => out.push_str("\\r"),
++            '\t' => out.push_str("\\t"),
++            c if (c as u32) < 0x20 => {
++                let _ = write!(out, "\\u{:04x}", c as u32);
++            }
++            c => out.push(c),
++        }
++    }
++    out
++}
++
++fn path_str(p: &Path) -> String {
++    json_escape(&p.to_string_lossy())
++}
++
++fn out_file_path(out: &OutFileName) -> Option<PathBuf> {
++    match out {
++        OutFileName::Real(p) => Some(p.clone()),
++        OutFileName::Stdout => None,
++    }
++}
++
++/// Write the offload manifest (`manifest.json`) into `dir`.
++///
++/// The manifest records the target description and codegen flags that the resuming
++/// backend must reproduce, plus the list of bitcode files. It is intentionally a plain,
++/// versioned, self-describing format so the Option B side stays decoupled from rustc's
++/// internal option representation.
++pub fn write_manifest(
++    sess: &Session,
++    outputs: &OutputFilenames,
++    cgus: &[OffloadCgu],
++    dir: &Path,
++) {
++    let opts = &sess.opts;
++
++    let mut j = String::new();
++    j.push_str("{\n");
++    let _ = writeln!(j, "  \"manifest_version\": 1,");
++
++    // What rustc produced this, so Option B can refuse on a version/LLVM mismatch.
++    let _ = writeln!(j, "  \"rustc_version\": \"{}\",", json_escape(sess.cfg_version));
++
++    // Target description.
++    let _ = writeln!(j, "  \"target\": \"{}\",", json_escape(opts.target_triple.tuple()));
++    let _ = writeln!(j, "  \"llvm_target\": \"{}\",", json_escape(&sess.target.llvm_target));
++    match &opts.cg.target_cpu {
++        Some(cpu) => {
++            let _ = writeln!(j, "  \"target_cpu\": \"{}\",", json_escape(cpu));
++        }
++        None => {
++            let _ = writeln!(j, "  \"target_cpu\": null,");
++        }
++    }
++    let _ =
++        writeln!(j, "  \"target_feature\": \"{}\",", json_escape(&opts.cg.target_feature));
++
++    // Codegen flags that influence optimization and machine-code generation.
++    let _ = writeln!(j, "  \"opt_level\": \"{:?}\",", opts.optimize);
++    let _ = writeln!(j, "  \"relocation_model\": \"{:?}\",", sess.relocation_model());
++    match sess.code_model() {
++        Some(cm) => {
++            let _ = writeln!(j, "  \"code_model\": \"{cm:?}\",");
++        }
++        None => {
++            let _ = writeln!(j, "  \"code_model\": null,");
++        }
++    }
++    let _ = writeln!(j, "  \"debuginfo\": \"{:?}\",", opts.debuginfo);
++
++    // Crate types and the artifact location Option B is expected to fill in.
++    let crate_types: Vec<String> =
++        opts.crate_types.iter().map(|ct| format!("\"{ct:?}\"")).collect();
++    let _ = writeln!(j, "  \"crate_types\": [{}],", crate_types.join(", "));
++
++    let _ = writeln!(j, "  \"out_directory\": \"{}\",", path_str(&outputs.with_extension("")));
++    if let Some(rmeta) = out_file_path(&outputs.path(OutputType::Metadata)) {
++        let _ = writeln!(j, "  \"rmeta\": \"{}\",", path_str(&rmeta));
++    } else {
++        let _ = writeln!(j, "  \"rmeta\": null,");
++    }
++
++    // The codegen units, in deterministic order.
++    j.push_str("  \"cgus\": [\n");
++    for (i, cgu) in cgus.iter().enumerate() {
++        let comma = if i + 1 == cgus.len() { "" } else { "," };
++        let _ = writeln!(
++            j,
++            "    {{ \"name\": \"{}\", \"kind\": \"{}\", \"bitcode\": \"{}\" }}{comma}",
++            json_escape(&cgu.name),
++            module_kind_str(cgu.kind),
++            path_str(&cgu.bitcode),
++        );
++    }
++    j.push_str("  ]\n");
++    j.push_str("}\n");
++
++    let path = dir.join("manifest.json");
++    if let Err(err) = std::fs::write(&path, j) {
++        sess.dcx().fatal(format!("failed to write offload manifest `{}`: {err}", path.display()));
++    }
++
++    // Also write the CGU list in a trivially-parseable TSV (`kind\tname\tbitcode`) so the
++    // resuming `-Zoffload-codegen` step does not have to parse JSON. `manifest.json` above
++    // stays as the human-readable record.
++    let mut tsv = String::new();
++    for cgu in cgus {
++        let _ = writeln!(
++            tsv,
++            "{}\t{}\t{}",
++            module_kind_str(cgu.kind),
++            cgu.name,
++            cgu.bitcode.display()
++        );
++    }
++    let tsv_path = dir.join("offload.cgus");
++    if let Err(err) = std::fs::write(&tsv_path, tsv) {
++        sess.dcx()
++            .fatal(format!("failed to write offload CGU list `{}`: {err}", tsv_path.display()));
++    }
++}
+diff --git a/compiler/rustc_codegen_ssa/src/back/write.rs b/compiler/rustc_codegen_ssa/src/back/write.rs
+index 9898c129614..aa47655e780 100644
+--- a/compiler/rustc_codegen_ssa/src/back/write.rs
++++ b/compiler/rustc_codegen_ssa/src/back/write.rs
+@@ -38,6 +38,7 @@
+ 
+ use super::link::{self, ensure_removed};
+ use super::lto::{self, SerializedModule};
++use super::offload::{self, OffloadCgu};
+ use crate::back::lto::check_lto_allowed;
+ use crate::errors::ErrorCreatingRemarkDir;
+ use crate::traits::*;
+@@ -118,6 +119,31 @@ pub struct ModuleConfig {
+ 
+ impl ModuleConfig {
+     fn new(kind: ModuleKind, tcx: TyCtxt<'_>, no_builtins: bool) -> ModuleConfig {
++        ModuleConfig::new_inner(kind, tcx.sess, no_builtins, need_bitcode_in_object(tcx))
++    }
++
++    /// Like [`ModuleConfig::new`], but for the backend-offload resume step
++    /// (`-Zoffload-codegen`), which has no [`TyCtxt`]. Everything is derived from the
++    /// `Session` (i.e. the codegen flags, which the resume step is invoked with) except
++    /// `need_bitcode_in_object`, which also needs the crate types from the manifest.
++    pub fn new_offload(
++        kind: ModuleKind,
++        sess: &Session,
++        crate_types: &[CrateType],
++        no_builtins: bool,
++    ) -> ModuleConfig {
++        let need_bitcode_in_object = sess.opts.cg.embed_bitcode
++            && crate_types.contains(&CrateType::Rlib)
++            && sess.opts.output_types.contains_key(&OutputType::Exe);
++        ModuleConfig::new_inner(kind, sess, no_builtins, need_bitcode_in_object)
++    }
++
++    fn new_inner(
++        kind: ModuleKind,
++        sess: &Session,
++        no_builtins: bool,
++        need_bitcode_in_object: bool,
++    ) -> ModuleConfig {
+         // If it's a regular module, use `$regular`, otherwise use `$other`.
+         // `$regular` and `$other` are evaluated lazily.
+         macro_rules! if_regular {
+@@ -126,7 +152,6 @@ macro_rules! if_regular {
+             };
+         }
+ 
+-        let sess = tcx.sess;
+         let opt_level_and_size = if_regular!(Some(sess.opts.optimize), None);
+ 
+         let save_temps = sess.opts.cg.save_temps;
+@@ -157,7 +182,7 @@ macro_rules! if_regular {
+             // `#![no_builtins]` is assumed to not participate in LTO and
+             // instead goes on to generate object code.
+             EmitObj::Bitcode
+-        } else if need_bitcode_in_object(tcx) {
++        } else if need_bitcode_in_object {
+             EmitObj::ObjectCode(BitcodeSection::Full)
+         } else {
+             EmitObj::ObjectCode(BitcodeSection::None)
+@@ -354,6 +379,10 @@ pub struct CodegenContext {
+     ///
+     /// Depends on [`ExtraBackendMethods::supports_parallel()`] and `-Zno_parallel_backend`.
+     pub parallel: bool,
++    /// Backend offload (`-Zoffload-emit=<dir>`): if set, each CGU is serialized to
++    /// unoptimized bitcode in this directory and the LLVM optimization/codegen pipeline
++    /// is skipped. See [`crate::back::offload`].
++    pub offload_emit: Option<PathBuf>,
+ }
+ 
+ fn generate_thin_lto_work<B: ExtraBackendMethods>(
+@@ -397,12 +426,17 @@ fn generate_thin_lto_work<B: ExtraBackendMethods>(
+ pub struct CompiledModules {
+     pub modules: Vec<CompiledModule>,
+     pub allocator_module: Option<CompiledModule>,
++    /// CGUs whose unoptimized bitcode was written out for backend offload
++    /// (`-Zoffload-emit`). Non-empty only in that mode, in which case `modules`
++    /// and `allocator_module` are empty because no machine code was produced.
++    pub offload_cgus: Vec<OffloadCgu>,
+ }
+ 
+ enum MaybeLtoModules<B: WriteBackendMethods> {
+     NoLto {
+         modules: Vec<CompiledModule>,
+         allocator_module: Option<CompiledModule>,
++        offload_cgus: Vec<OffloadCgu>,
+     },
+     FatLto {
+         cgcx: CodegenContext,
+@@ -794,6 +828,11 @@ pub(crate) enum WorkItemResult<B: WriteBackendMethods> {
+     /// The backend has finished compiling a CGU, which now needs to go through
+     /// thin LTO.
+     NeedsThinLto(String, B::ModuleBuffer),
++
++    /// Backend offload (`-Zoffload-emit`): the CGU's unoptimized bitcode was written
++    /// out and no further backend work is done here (optimization and codegen are
++    /// resumed elsewhere). See [`crate::back::offload`].
++    OffloadEmitted(OffloadCgu),
+ }
+ 
+ pub enum FatLtoInput<B: WriteBackendMethods> {
+@@ -802,13 +841,13 @@ pub enum FatLtoInput<B: WriteBackendMethods> {
+ }
+ 
+ /// Actual LTO type we end up choosing based on multiple factors.
+-pub(crate) enum ComputedLtoType {
++pub enum ComputedLtoType {
+     No,
+     Thin,
+     Fat,
+ }
+ 
+-pub(crate) fn compute_per_cgu_lto_type(
++pub fn compute_per_cgu_lto_type(
+     sess_lto: &Lto,
+     linker_does_lto: bool,
+     sess_crate_types: &[CrateType],
+@@ -843,6 +882,20 @@ fn execute_optimize_work_item<B: ExtraBackendMethods>(
+ ) -> WorkItemResult<B> {
+     let _timer = prof.generic_activity_with_arg("codegen_module_optimize", &*module.name);
+ 
++    // Backend offload, emit side (`-Zoffload-emit`): the module is fully codegened but
++    // still unoptimized, which is exactly the state we want to ship elsewhere. Serialize
++    // it to bitcode and stop — no optimization, codegen, or LTO happens on this machine.
++    if let Some(dir) = &cgcx.offload_emit {
++        let name = module.name;
++        let kind = module.kind;
++        let buffer = B::serialize_module(module.module_llvm, false);
++        let bitcode = dir.join(format!("{name}.bc"));
++        if let Err(err) = fs::write(&bitcode, buffer.data()) {
++            shared_emitter.fatal(&format!("failed to write offload bitcode `{}`: {err}", bitcode.display()));
++        }
++        return WorkItemResult::OffloadEmitted(OffloadCgu { name, kind, bitcode });
++    }
++
+     B::optimize(cgcx, prof, &shared_emitter, &mut module, &cgcx.module_config);
+ 
+     // After we've done the initial round of optimizations we need to
+@@ -1013,7 +1066,7 @@ fn do_fat_lto<B: ExtraBackendMethods>(
+     B::codegen(cgcx, prof, &shared_emitter, module, &cgcx.module_config)
+ }
+ 
+-fn do_thin_lto<B: ExtraBackendMethods>(
++pub fn do_thin_lto<B: ExtraBackendMethods>(
+     cgcx: &CodegenContext,
+     prof: &SelfProfilerRef,
+     shared_emitter: SharedEmitter,
+@@ -1292,6 +1345,16 @@ fn start_executing_work<B: ExtraBackendMethods>(
+     let exported_symbols_for_lto =
+         Arc::new(lto::exported_symbols_for_lto(tcx, &each_linked_rlib_for_lto));
+ 
++    // Backend offload (`-Zoffload-emit`): these LTO symbols are derived from the frontend
++    // (the `tcx`), which the resuming `-Zoffload-codegen` step does not have. Serialize
++    // them (one per line) so that step can run ThinLTO. Empty when not doing LTO.
++    if let Some(dir) = &sess.opts.unstable_opts.offload_emit {
++        let path = dir.join("lto-symbols");
++        if let Err(err) = fs::write(&path, exported_symbols_for_lto.join("\n")) {
++            sess.dcx().fatal(format!("failed to write `{}`: {err}", path.display()));
++        }
++    }
++
+     // First up, convert our jobserver into a helper thread so we can use normal
+     // mpsc channels to manage our messages and such.
+     // After we've requested tokens then we'll, when we can,
+@@ -1346,6 +1409,7 @@ fn start_executing_work<B: ExtraBackendMethods>(
+         parallel: backend.supports_parallel() && !sess.opts.unstable_opts.no_parallel_backend,
+         pointer_size: tcx.data_layout.pointer_size(),
+         invocation_temp: sess.invocation_temp.clone(),
++        offload_emit: sess.opts.unstable_opts.offload_emit.clone(),
+     };
+ 
+     // This is the "main loop" of parallel work happening for parallel codegen.
+@@ -1487,6 +1551,7 @@ fn start_executing_work<B: ExtraBackendMethods>(
+         // This is where we collect codegen units that have gone all the way
+         // through codegen and LLVM.
+         let mut compiled_modules = vec![];
++        let mut offload_cgus = vec![];
+         let mut needs_fat_lto = Vec::new();
+         let mut needs_thin_lto = Vec::new();
+         let mut lto_import_only_modules = Vec::new();
+@@ -1526,8 +1591,21 @@ enum CodegenState {
+ 
+         let mut llvm_start_time: Option<VerboseTimingGuard<'_>> = None;
+ 
+-        if let Some(allocator_module) = &mut allocator_module {
+-            B::optimize(&cgcx, &prof, &shared_emitter, allocator_module, &allocator_config);
++        if let Some(dir) = &cgcx.offload_emit {
++            if let Some(allocator_module) = allocator_module.take() {
++                let name = allocator_module.name;
++                let kind = allocator_module.kind;
++                let buffer = B::serialize_module(allocator_module.module_llvm, false);
++                let bitcode = dir.join(format!("{name}.bc"));
++                if let Err(err) = fs::write(&bitcode, buffer.data()) {
++                    shared_emitter.fatal(&format!("failed to write offload bitcode `{}`: {err}", bitcode.display()));
++                }
++                offload_cgus.push(OffloadCgu { name, kind, bitcode });
++            }
++        } else {
++            if let Some(allocator_module) = &mut allocator_module {
++                B::optimize(&cgcx, &prof, &shared_emitter, allocator_module, &allocator_config);
++            }
+         }
+ 
+         // Run the message loop while there's still anything that needs message
+@@ -1739,6 +1817,9 @@ enum CodegenState {
+                             assert!(needs_fat_lto.is_empty());
+                             needs_thin_lto.push((name, thin_buffer));
+                         }
++                        Ok(WorkItemResult::OffloadEmitted(cgu)) => {
++                            offload_cgus.push(cgu);
++                        }
+                         Err(Some(WorkerFatalError)) => {
+                             // Like `CodegenAborted`, wait for remaining work to finish.
+                             codegen_state = Aborted;
+@@ -1823,6 +1904,7 @@ enum CodegenState {
+             allocator_module: allocator_module.map(|allocator_module| {
+                 B::codegen(&cgcx, &prof, &shared_emitter, allocator_module, &allocator_config)
+             }),
++            offload_cgus,
+         })
+     })
+     .expect("failed to spawn coordinator thread");
+@@ -1990,7 +2072,7 @@ pub struct SharedEmitterMain {
+ }
+ 
+ impl SharedEmitter {
+-    fn new() -> (SharedEmitter, SharedEmitterMain) {
++    pub fn new() -> (SharedEmitter, SharedEmitterMain) {
+         let (sender, receiver) = channel();
+ 
+         (SharedEmitter { sender }, SharedEmitterMain { receiver })
+@@ -2038,7 +2120,7 @@ fn source_map(&self) -> Option<&SourceMap> {
+ }
+ 
+ impl SharedEmitterMain {
+-    fn check(&self, sess: &Session, blocking: bool) {
++    pub fn check(&self, sess: &Session, blocking: bool) {
+         loop {
+             let message = if blocking {
+                 match self.receiver.recv() {
+@@ -2170,9 +2252,9 @@ pub fn join(self, sess: &Session) -> (CodegenResults, FxIndexMap<WorkProductId,
+ 
+         // Catch fatal errors to ensure shared_emitter_main.check() can emit the actual diagnostics
+         let compiled_modules = catch_fatal_errors(|| match maybe_lto_modules {
+-            MaybeLtoModules::NoLto { modules, allocator_module } => {
++            MaybeLtoModules::NoLto { modules, allocator_module, offload_cgus } => {
+                 drop(shared_emitter);
+-                CompiledModules { modules, allocator_module }
++                CompiledModules { modules, allocator_module, offload_cgus }
+             }
+             MaybeLtoModules::FatLto {
+                 cgcx,
+@@ -2199,6 +2281,7 @@ pub fn join(self, sess: &Session) -> (CodegenResults, FxIndexMap<WorkProductId,
+                         lto_import_only_modules,
+                     )],
+                     allocator_module: None,
++                    offload_cgus: vec![],
+                 }
+             }
+             MaybeLtoModules::ThinLto {
+@@ -2226,6 +2309,7 @@ pub fn join(self, sess: &Session) -> (CodegenResults, FxIndexMap<WorkProductId,
+                         lto_import_only_modules,
+                     ),
+                     allocator_module: None,
++                    offload_cgus: vec![],
+                 }
+             }
+         });
+@@ -2241,6 +2325,27 @@ pub fn join(self, sess: &Session) -> (CodegenResults, FxIndexMap<WorkProductId,
+         // the backend in the same order every time to ensure that we're handing
+         // out deterministic results.
+         compiled_modules.modules.sort_by(|a, b| a.name.cmp(&b.name));
++        compiled_modules.offload_cgus.sort_by(|a, b| a.name.cmp(&b.name));
++
++        // Backend offload, emit side (`-Zoffload-emit`): no machine code was produced.
++        // Write the manifest describing the emitted bitcode and return empty results; the
++        // driver skips linking in this mode (see `rustc_interface::Linker::link`).
++        if let Some(dir) = &sess.opts.unstable_opts.offload_emit {
++            offload::write_manifest(
++                sess,
++                &self.output_filenames,
++                &compiled_modules.offload_cgus,
++                dir,
++            );
++            return (
++                CodegenResults {
++                    crate_info: self.crate_info,
++                    modules: vec![],
++                    allocator_module: None,
++                },
++                FxIndexMap::default(),
++            );
++        }
+ 
+         let work_products =
+             copy_all_cgu_workproducts_to_incr_comp_cache_dir(sess, &compiled_modules);
+diff --git a/compiler/rustc_codegen_ssa/src/traits/backend.rs b/compiler/rustc_codegen_ssa/src/traits/backend.rs
+index 7ebff77710f..d148321c728 100644
+--- a/compiler/rustc_codegen_ssa/src/traits/backend.rs
++++ b/compiler/rustc_codegen_ssa/src/traits/backend.rs
+@@ -1,5 +1,6 @@
+ use std::any::Any;
+ use std::hash::Hash;
++use std::path::Path;
+ 
+ use rustc_ast::expand::allocator::AllocatorMethod;
+ use rustc_data_structures::fx::FxIndexMap;
+@@ -134,6 +135,14 @@ fn link(
+             self.name(),
+         );
+     }
++
++    /// Backend offload, resume side (`-Zoffload-codegen=<dir>`): without running the
++    /// frontend, read the unoptimized bitcode and serialized crate info that the
++    /// `-Zoffload-emit` step left in `dir`, run the optimization/codegen pipeline and link.
++    /// The default implementation errors; backends that support offload override it.
++    fn offload_codegen(&self, sess: &Session, _dir: &Path) {
++        sess.dcx().fatal(format!("backend `{}` does not support -Zoffload-codegen", self.name()));
++    }
+ }
+ 
+ pub trait ExtraBackendMethods:
+diff --git a/compiler/rustc_driver_impl/src/lib.rs b/compiler/rustc_driver_impl/src/lib.rs
+index 38a11b427c1..d53e3f2288c 100644
+--- a/compiler/rustc_driver_impl/src/lib.rs
++++ b/compiler/rustc_driver_impl/src/lib.rs
+@@ -268,6 +268,13 @@ pub fn run_compiler(at_args: &[String], callbacks: &mut (dyn Callbacks + Send))
+             return early_exit();
+         }
+ 
++        // Backend offload, resume side (`-Zoffload-codegen=<dir>`): optimize + codegen the
++        // bitcode emitted by an earlier `-Zoffload-emit` step and link, without a frontend.
++        if let Some(dir) = &sess.opts.unstable_opts.offload_codegen {
++            codegen_backend.offload_codegen(sess, dir);
++            return early_exit();
++        }
++
+         // Parse the crate root source code (doesn't parse submodules yet)
+         // Everything else is parsed during macro expansion.
+         let mut krate = passes::parse(sess);
+diff --git a/compiler/rustc_interface/src/queries.rs b/compiler/rustc_interface/src/queries.rs
+index 3799485077e..8bd942ace29 100644
+--- a/compiler/rustc_interface/src/queries.rs
++++ b/compiler/rustc_interface/src/queries.rs
+@@ -73,6 +73,26 @@ pub fn link(self, sess: &Session, codegen_backend: &dyn CodegenBackend) {
+ 
+         sess.dcx().abort_if_errors();
+ 
++        // Backend offload, emit side (`-Zoffload-emit`): `join_codegen` above wrote each
++        // CGU's unoptimized bitcode plus a manifest. Here we also serialize the crate info,
++        // metadata and output filenames (everything the resuming `-Zoffload-codegen` step
++        // needs for linking but cannot recompute without the frontend) as an `.rlink` file.
++        // Then stop: optimization, machine-code generation and linking happen elsewhere.
++        if let Some(dir) = &sess.opts.unstable_opts.offload_emit {
++            let rlink_file = dir.join("offload.rlink");
++            CodegenResults::serialize_rlink(
++                sess,
++                &rlink_file,
++                &codegen_results,
++                &self.metadata,
++                &self.output_filenames,
++            )
++            .unwrap_or_else(|error| {
++                sess.dcx().emit_fatal(FailedWritingFile { path: &rlink_file, error })
++            });
++            return;
++        }
++
+         let _timer = sess.timer("link");
+ 
+         sess.time("serialize_work_products", || {
+diff --git a/compiler/rustc_session/src/options.rs b/compiler/rustc_session/src/options.rs
+index 74b3aa11d0d..c627824d559 100644
+--- a/compiler/rustc_session/src/options.rs
++++ b/compiler/rustc_session/src/options.rs
+@@ -2519,6 +2519,18 @@ pub(crate) fn parse_align(slot: &mut Option<Align>, v: Option<&str>) -> bool {
+         Mandatory setting:
+         `=Enable`
+         Currently the only option available"),
++    offload_codegen: Option<PathBuf> = (None, parse_opt_pathbuf, [UNTRACKED],
++        "for backend offload: resume a compilation from the directory produced by \
++         `-Zoffload-emit`. Reads each CGU's unoptimized bitcode plus the serialized \
++         crate info, runs the LLVM optimization/codegen pipeline and links, without \
++         running the frontend. Must be invoked with the same target and codegen flags \
++         as the `-Zoffload-emit` step."),
++    offload_emit: Option<PathBuf> = (None, parse_opt_pathbuf, [UNTRACKED],
++        "for backend offload: run the frontend and codegen each CGU to unoptimized \
++         LLVM bitcode, write the bitcode plus a manifest into the given directory, then \
++         stop before the LLVM optimization/codegen pipeline (the optimization and machine \
++         code generation are meant to be resumed on another machine). \
++         Untracked so the emitted bitcode is byte-identical to a native build."),
+     on_broken_pipe: OnBrokenPipe = (OnBrokenPipe::Default, parse_on_broken_pipe, [TRACKED],
+         "behavior of std::io::ErrorKind::BrokenPipe (SIGPIPE)"),
+     osx_rpath_install_name: bool = (false, parse_bool, [TRACKED],
+-- 
+2.55.0
+

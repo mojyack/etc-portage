@@ -1,5 +1,7 @@
 FEATURES="nodoc noinfo noman parallel-fetch parallel-install userpriv -pid-sandbox -sandbox -userfetch -usersandbox -usersync -xattr"
 ACCEPT_KEYWORDS="amd64 arm64"
 ACCEPT_LICENSE="*"
+PORTAGE_USERNAME="mojyack"
+PORTAGE_GRPNAME="mojyack"
 CPU_FLAGS_X86=""
 VIDEO_CARDS=""
