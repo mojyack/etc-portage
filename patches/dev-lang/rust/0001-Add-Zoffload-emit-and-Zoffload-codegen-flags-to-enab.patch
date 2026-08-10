@@ -1,4 +1,4 @@
-From 3e3321bf7c8169a387cc1cb99365ca107dc3c9e9 Mon Sep 17 00:00:00 2001
+From d9bf6cd916aa02d050bfd2078f2ca06c79411d67 Mon Sep 17 00:00:00 2001
 From: mojyack <mojyack@gmail.com>
 Date: Fri, 7 Aug 2026 15:14:58 +0900
 Subject: [PATCH] Add -Zoffload-emit and -Zoffload-codegen flags to enable
@@ -14,16 +14,17 @@ pipeline into three distinct phases for distributed compilation:
   files.
 ---
  compiler/rustc_codegen_llvm/src/back/mod.rs   |   1 +
- .../src/back/offload_codegen.rs               | 315 ++++++++++++++++++
+ .../src/back/offload_codegen.rs               | 317 ++++++++++++++++++
  compiler/rustc_codegen_llvm/src/lib.rs        |   6 +-
  compiler/rustc_codegen_ssa/src/back/mod.rs    |   1 +
  .../rustc_codegen_ssa/src/back/offload.rs     | 164 +++++++++
  compiler/rustc_codegen_ssa/src/back/write.rs  | 127 ++++++-
+ compiler/rustc_codegen_ssa/src/lib.rs         |   4 +-
  .../rustc_codegen_ssa/src/traits/backend.rs   |   9 +
  compiler/rustc_driver_impl/src/lib.rs         |   7 +
  compiler/rustc_interface/src/queries.rs       |  20 ++
  compiler/rustc_session/src/options.rs         |  12 +
- 10 files changed, 650 insertions(+), 12 deletions(-)
+ 11 files changed, 655 insertions(+), 13 deletions(-)
  create mode 100644 compiler/rustc_codegen_llvm/src/back/offload_codegen.rs
  create mode 100644 compiler/rustc_codegen_ssa/src/back/offload.rs
 
@@ -40,10 +41,10 @@ index 6cb89f80ab8..80a2665c119 100644
  pub(crate) mod write;
 diff --git a/compiler/rustc_codegen_llvm/src/back/offload_codegen.rs b/compiler/rustc_codegen_llvm/src/back/offload_codegen.rs
 new file mode 100644
-index 00000000000..4d44a0bc369
+index 00000000000..c3bcf9abdd3
 --- /dev/null
 +++ b/compiler/rustc_codegen_llvm/src/back/offload_codegen.rs
-@@ -0,0 +1,315 @@
+@@ -0,0 +1,317 @@
 +//! Backend offload, resume side (Option B).
 +//!
 +//! Implements `-Zoffload-codegen=<dir>`: pick up the unoptimized bitcode and serialized
@@ -277,7 +278,9 @@ index 00000000000..4d44a0bc369
 +
 +    let tm_factory = backend.target_machine_factory(sess, cgcx.opt_level, &cgcx.backend_features);
 +    // Thin-link + per-module import/optimize/codegen (the offloaded heavy lifting).
-+    compiled.extend(do_thin_lto::<LlvmCodegenBackend>(cgcx, &sess.prof, shared_emitter, tm_factory, Arc::new(exported), rlib_files, needs_thin, Vec::new()));
++    if !needs_thin.is_empty() {
++        compiled.extend(do_thin_lto::<LlvmCodegenBackend>(cgcx, &sess.prof, shared_emitter, tm_factory, Arc::new(exported), rlib_files, needs_thin, Vec::new()));
++    }
 +    compiled
 +}
 +
@@ -862,6 +865,21 @@ index 9898c129614..aa47655e780 100644
  
          let work_products =
              copy_all_cgu_workproducts_to_incr_comp_cache_dir(sess, &compiled_modules);
+diff --git a/compiler/rustc_codegen_ssa/src/lib.rs b/compiler/rustc_codegen_ssa/src/lib.rs
+index 42a4985d023..f6f460eb6a2 100644
+--- a/compiler/rustc_codegen_ssa/src/lib.rs
++++ b/compiler/rustc_codegen_ssa/src/lib.rs
+@@ -340,7 +340,9 @@ pub fn deserialize_rlink(
+             return Err(CodegenErrors::CorruptFile);
+         };
+         let rustc_version = decoder.read_str();
+-        if rustc_version != sess.cfg_version {
++        let rlink_version = rustc_version.split(|c| c == '-' || c == ' ').next().unwrap_or(rustc_version);
++        let current_version = sess.cfg_version.split(|c| c == '-' || c == ' ').next().unwrap_or(sess.cfg_version);
++        if rlink_version != current_version {
+             return Err(CodegenErrors::RustcVersionMismatch {
+                 rustc_version: rustc_version.to_string(),
+             });
 diff --git a/compiler/rustc_codegen_ssa/src/traits/backend.rs b/compiler/rustc_codegen_ssa/src/traits/backend.rs
 index 7ebff77710f..d148321c728 100644
 --- a/compiler/rustc_codegen_ssa/src/traits/backend.rs

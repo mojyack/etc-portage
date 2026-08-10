@@ -1,1 +1,2 @@
-RUSTC_WRAPPER="/usr/local/bin/rsold-rustc-portage"
+PORTAGE_TMPDIR="/tmp/rsold"
+RUSTC_WRAPPER="/usr/local/bin/rsold-rustc"
