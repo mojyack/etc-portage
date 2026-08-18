@@ -1,6 +1,6 @@
-From d9bf6cd916aa02d050bfd2078f2ca06c79411d67 Mon Sep 17 00:00:00 2001
+From fa27a28e48384d280b73cf0b00a7199b80e24605 Mon Sep 17 00:00:00 2001
 From: mojyack <mojyack@gmail.com>
-Date: Fri, 7 Aug 2026 15:14:58 +0900
+Date: Tue, 18 Aug 2026 01:03:23 +0900
 Subject: [PATCH] Add -Zoffload-emit and -Zoffload-codegen flags to enable
  distributed compilation
 
@@ -13,21 +13,38 @@ pipeline into three distinct phases for distributed compilation:
 - `-Zlink-only`: Native host linkage phase using the resulting object
   files.
 ---
+ .../rustc_codegen_cranelift/src/driver/aot.rs |   3 +-
  compiler/rustc_codegen_llvm/src/back/mod.rs   |   1 +
- .../src/back/offload_codegen.rs               | 317 ++++++++++++++++++
+ .../src/back/offload_codegen.rs               | 325 ++++++++++++++++++
  compiler/rustc_codegen_llvm/src/lib.rs        |   6 +-
  compiler/rustc_codegen_ssa/src/back/mod.rs    |   1 +
- .../rustc_codegen_ssa/src/back/offload.rs     | 164 +++++++++
- compiler/rustc_codegen_ssa/src/back/write.rs  | 127 ++++++-
- compiler/rustc_codegen_ssa/src/lib.rs         |   4 +-
+ .../rustc_codegen_ssa/src/back/offload.rs     | 166 +++++++++
+ compiler/rustc_codegen_ssa/src/back/write.rs  | 115 ++++++-
+ compiler/rustc_codegen_ssa/src/lib.rs         |   4 +
  .../rustc_codegen_ssa/src/traits/backend.rs   |   9 +
  compiler/rustc_driver_impl/src/lib.rs         |   7 +
- compiler/rustc_interface/src/queries.rs       |  20 ++
+ compiler/rustc_interface/src/passes.rs        |   2 +-
+ compiler/rustc_interface/src/queries.rs       |  21 ++
+ compiler/rustc_interface/src/util.rs          |   2 +-
  compiler/rustc_session/src/options.rs         |  12 +
- 11 files changed, 655 insertions(+), 13 deletions(-)
+ 14 files changed, 661 insertions(+), 13 deletions(-)
  create mode 100644 compiler/rustc_codegen_llvm/src/back/offload_codegen.rs
  create mode 100644 compiler/rustc_codegen_ssa/src/back/offload.rs
 
+diff --git a/compiler/rustc_codegen_cranelift/src/driver/aot.rs b/compiler/rustc_codegen_cranelift/src/driver/aot.rs
+index c74e0b9b1a6..c63cccdecfe 100644
+--- a/compiler/rustc_codegen_cranelift/src/driver/aot.rs
++++ b/compiler/rustc_codegen_cranelift/src/driver/aot.rs
+@@ -121,7 +121,8 @@ pub(crate) fn join(
+ 
+         sess.dcx().abort_if_errors();
+ 
+-        let compiled_modules = CompiledModules { modules, allocator_module: self.allocator_module };
++        let compiled_modules =
++            CompiledModules { modules, allocator_module: self.allocator_module, offload_cgus: vec![] };
+ 
+         produce_final_output_artifacts(sess, &compiled_modules, outputs);
+ 
 diff --git a/compiler/rustc_codegen_llvm/src/back/mod.rs b/compiler/rustc_codegen_llvm/src/back/mod.rs
 index 6cb89f80ab8..80a2665c119 100644
 --- a/compiler/rustc_codegen_llvm/src/back/mod.rs
@@ -41,10 +58,10 @@ index 6cb89f80ab8..80a2665c119 100644
  pub(crate) mod write;
 diff --git a/compiler/rustc_codegen_llvm/src/back/offload_codegen.rs b/compiler/rustc_codegen_llvm/src/back/offload_codegen.rs
 new file mode 100644
-index 00000000000..c3bcf9abdd3
+index 00000000000..6954858dd56
 --- /dev/null
 +++ b/compiler/rustc_codegen_llvm/src/back/offload_codegen.rs
-@@ -0,0 +1,317 @@
+@@ -0,0 +1,325 @@
 +//! Backend offload, resume side (Option B).
 +//!
 +//! Implements `-Zoffload-codegen=<dir>`: pick up the unoptimized bitcode and serialized
@@ -64,13 +81,14 @@ index 00000000000..c3bcf9abdd3
 +
 +use rustc_abi::Size;
 +use rustc_codegen_ssa::back::link;
++use rustc_codegen_ssa::back::lto::SerializedModule;
 +use rustc_codegen_ssa::back::write::{
-+    CodegenContext, ComputedLtoType, ModuleConfig, SharedEmitter, compute_per_cgu_lto_type,
-+    do_thin_lto,
++    CodegenContext, ComputedLtoType, ModuleConfig, SharedEmitter, ThinLtoInput,
++    compute_per_cgu_lto_type, do_thin_lto,
 +};
-+use rustc_codegen_ssa::traits::ExtraBackendMethods;
++use rustc_codegen_ssa::traits::{ExtraBackendMethods, WriteBackendMethods};
 +use rustc_codegen_ssa::{
-+    CodegenErrors, CodegenResults, CompiledModule, CrateInfo, ModuleCodegen, ModuleKind,
++    CodegenError, CompiledModule, CompiledModules, CrateInfo, ModuleCodegen, ModuleKind,
 +};
 +use rustc_session::Session;
 +use rustc_session::config::Lto;
@@ -243,7 +261,7 @@ index 00000000000..c3bcf9abdd3
 +    });
 +
 +    // Parse + pre-link-optimize each local CGU and route it like the normal coordinator.
-+    let mut needs_thin: Vec<(String, ModuleBuffer)> = Vec::new();
++    let mut needs_thin: Vec<ThinLtoInput<LlvmCodegenBackend>> = Vec::new();
 +    let mut compiled: Vec<CompiledModule> = Vec::new();
 +    for cgu in cgus {
 +        let dcx = rustc_errors::DiagCtxt::new(Box::new(shared_emitter.clone()));
@@ -268,7 +286,10 @@ index 00000000000..c3bcf9abdd3
 +
 +        back::write::optimize(cgcx, &sess.prof, &shared_emitter, &mut module, config);
 +        match compute_per_cgu_lto_type(&cgcx.lto, cgcx.use_linker_plugin_lto, &cgcx.crate_types) {
-+            ComputedLtoType::Thin => needs_thin.push((module.name.clone(), crate::back::lto::ModuleBuffer::new(module.module_llvm.llmod(), true))),
++            ComputedLtoType::Thin => needs_thin.push(ThinLtoInput::Red {
++                name: module.name.clone(),
++                buffer: SerializedModule::Local(ModuleBuffer::new(module.module_llvm.llmod(), true)),
++            }),
 +            ComputedLtoType::No => compiled.push(back::write::codegen(cgcx, &sess.prof, &shared_emitter, module, config)),
 +            ComputedLtoType::Fat => {
 +                dcx.fatal("backend offload of fat LTO (`-Clto=fat`) is not supported")
@@ -278,9 +299,7 @@ index 00000000000..c3bcf9abdd3
 +
 +    let tm_factory = backend.target_machine_factory(sess, cgcx.opt_level, &cgcx.backend_features);
 +    // Thin-link + per-module import/optimize/codegen (the offloaded heavy lifting).
-+    if !needs_thin.is_empty() {
-+        compiled.extend(do_thin_lto::<LlvmCodegenBackend>(cgcx, &sess.prof, shared_emitter, tm_factory, Arc::new(exported), rlib_files, needs_thin, Vec::new()));
-+    }
++    compiled.extend(do_thin_lto::<LlvmCodegenBackend>(cgcx, &sess.prof, shared_emitter, tm_factory, Arc::new(exported), rlib_files, needs_thin));
 +    compiled
 +}
 +
@@ -292,21 +311,21 @@ index 00000000000..c3bcf9abdd3
 +    let rlink_data = std::fs::read(&rlink_path).unwrap_or_else(|err| {
 +        sess.dcx().fatal(format!("failed to read `{}`: {err}", rlink_path.display()))
 +    });
-+    let (mut codegen_results, metadata, outputs) =
-+        match CodegenResults::deserialize_rlink(sess, rlink_data) {
-+            Ok(triple) => triple,
++    let (mut compiled_modules, crate_info, metadata, outputs) =
++        match CompiledModules::deserialize_rlink(sess, rlink_data) {
++            Ok(tuple) => tuple,
 +            Err(err) => {
 +                let reason = match err {
-+                    CodegenErrors::WrongFileType => "not an offload rlink file".to_string(),
-+                    CodegenErrors::EmptyVersionNumber => "empty version number".to_string(),
-+                    CodegenErrors::EncodingVersionMismatch { version_array, rlink_version } => {
++                    CodegenError::WrongFileType => "not an offload rlink file".to_string(),
++                    CodegenError::EmptyVersionNumber => "empty version number".to_string(),
++                    CodegenError::EncodingVersionMismatch { version_array, rlink_version } => {
 +                        format!("rlink format version mismatch: {rlink_version} vs {version_array}")
 +                    }
-+                    CodegenErrors::RustcVersionMismatch { rustc_version } => format!(
++                    CodegenError::RustcVersionMismatch { rustc_version } => format!(
 +                        "rustc version mismatch: emit step used {rustc_version}, this is {}",
 +                        sess.cfg_version
 +                    ),
-+                    CodegenErrors::CorruptFile => "corrupt file".to_string(),
++                    CodegenError::CorruptFile => "corrupt file".to_string(),
 +                };
 +                sess.dcx().fatal(format!("failed to read `{}`: {reason}", rlink_path.display()))
 +            }
@@ -320,17 +339,17 @@ index 00000000000..c3bcf9abdd3
 +        Arc::new(ModuleConfig::new_offload(ModuleKind::Allocator, sess, &cgcx.crate_types, false));
 +
 +    if sess.lto() == Lto::Thin {
-+        // ThinLTO: the expensive cross-module optimization, offloaded here. `codegen_results`
++        // ThinLTO: the expensive cross-module optimization, offloaded here. `compiled_modules`
 +        // carries empty modules from the emit step; fill them with the LTO output. ThinLTO
 +        // folds every module (incl. the allocator) into `modules`.
-+        codegen_results.modules = thin_lto_codegen(backend, &cgcx, sess, dir, &cgus, &codegen_results.crate_info, &allocator_config, shared_emitter.clone());
++        compiled_modules.modules = thin_lto_codegen(backend, &cgcx, sess, dir, &cgus, &crate_info, &allocator_config, shared_emitter.clone());
 +    } else {
 +        // Optimize + codegen each CGU. Runs synchronously; parallelism is a later refinement.
 +        for cgu in &cgus {
 +            let compiled = codegen_one_cgu(backend, sess, &cgcx, cgu, &allocator_config, shared_emitter.clone());
 +            match cgu.kind {
-+                ModuleKind::Regular => codegen_results.modules.push(compiled),
-+                ModuleKind::Allocator => codegen_results.allocator_module = Some(compiled),
++                ModuleKind::Regular => compiled_modules.modules.push(compiled),
++                ModuleKind::Allocator => compiled_modules.allocator_module = Some(compiled),
 +            }
 +        }
 +    }
@@ -340,7 +359,7 @@ index 00000000000..c3bcf9abdd3
 +    sess.dcx().abort_if_errors();
 +
 +    // Deterministic module order, matching the normal coordinator.
-+    codegen_results.modules.sort_by(|a, b| a.name.cmp(&b.name));
++    compiled_modules.modules.sort_by(|a, b| a.name.cmp(&b.name));
 +
 +    // distcc-style split: with `-Zno-link`, stop after producing the object files and
 +    // serialize the now-complete `CodegenResults` to an `.rlink`. The (cheap, fully
@@ -352,21 +371,27 @@ index 00000000000..c3bcf9abdd3
 +        // `<out>.rlink`) so the host-side wrapper can find it deterministically for the
 +        // `-Zlink-only` step without having to reconstruct the output filestem.
 +        let rlink_file = dir.join("codegen.rlink");
-+        CodegenResults::serialize_rlink(sess, &rlink_file, &codegen_results, &metadata, &outputs)
-+            .unwrap_or_else(|err| {
-+                sess.dcx()
-+                    .fatal(format!("failed to write `{}`: {err}", rlink_file.display()))
-+            });
++        CompiledModules::serialize_rlink(
++            sess,
++            &rlink_file,
++            &compiled_modules,
++            &crate_info,
++            &metadata,
++            &outputs,
++        )
++        .unwrap_or_else(|err| {
++            sess.dcx().fatal(format!("failed to write `{}`: {err}", rlink_file.display()))
++        });
 +    } else {
 +        use rustc_codegen_ssa::traits::CodegenBackend;
-+        backend.link(sess, codegen_results, metadata, &outputs);
++        backend.link(sess, compiled_modules, crate_info, metadata, &outputs);
 +    }
 +}
 diff --git a/compiler/rustc_codegen_llvm/src/lib.rs b/compiler/rustc_codegen_llvm/src/lib.rs
-index 6f8451b6c01..77f03848271 100644
+index ea802e96633..e66b9a2ee4a 100644
 --- a/compiler/rustc_codegen_llvm/src/lib.rs
 +++ b/compiler/rustc_codegen_llvm/src/lib.rs
-@@ -20,7 +20,7 @@
+@@ -19,7 +19,7 @@
  use std::any::Any;
  use std::ffi::CStr;
  use std::mem::ManuallyDrop;
@@ -375,7 +400,7 @@ index 6f8451b6c01..77f03848271 100644
  
  use back::owned_target_machine::OwnedTargetMachine;
  use back::write::{create_informational_target_machine, create_target_machine};
-@@ -411,6 +411,10 @@ fn link(
+@@ -393,6 +393,10 @@ fn link(
              self.name(),
          );
      }
@@ -400,10 +425,10 @@ index 8d1adb99930..fa8307b0c61 100644
  pub mod write;
 diff --git a/compiler/rustc_codegen_ssa/src/back/offload.rs b/compiler/rustc_codegen_ssa/src/back/offload.rs
 new file mode 100644
-index 00000000000..77d00a558f6
+index 00000000000..e24dd1c838e
 --- /dev/null
 +++ b/compiler/rustc_codegen_ssa/src/back/offload.rs
-@@ -0,0 +1,164 @@
+@@ -0,0 +1,166 @@
 +//! Backend offload, emit side (Option A).
 +//!
 +//! When `-Zoffload-emit=<dir>` is given, the frontend runs normally and each codegen
@@ -418,12 +443,14 @@ index 00000000000..77d00a558f6
 +use std::fmt::Write as _;
 +use std::path::{Path, PathBuf};
 +
++use rustc_macros::{Decodable, Encodable};
 +use rustc_session::Session;
 +use rustc_session::config::{OutFileName, OutputFilenames, OutputType};
 +
 +use crate::ModuleKind;
 +
 +/// One codegen unit whose unoptimized bitcode has been written out for offload.
++#[derive(Encodable, Decodable)]
 +pub struct OffloadCgu {
 +    pub name: String,
 +    pub kind: ModuleKind,
@@ -569,10 +596,10 @@ index 00000000000..77d00a558f6
 +    }
 +}
 diff --git a/compiler/rustc_codegen_ssa/src/back/write.rs b/compiler/rustc_codegen_ssa/src/back/write.rs
-index 9898c129614..aa47655e780 100644
+index 82d7e23602e..82eff4cdd25 100644
 --- a/compiler/rustc_codegen_ssa/src/back/write.rs
 +++ b/compiler/rustc_codegen_ssa/src/back/write.rs
-@@ -38,6 +38,7 @@
+@@ -37,6 +37,7 @@
  
  use super::link::{self, ensure_removed};
  use super::lto::{self, SerializedModule};
@@ -580,7 +607,7 @@ index 9898c129614..aa47655e780 100644
  use crate::back::lto::check_lto_allowed;
  use crate::errors::ErrorCreatingRemarkDir;
  use crate::traits::*;
-@@ -118,6 +119,31 @@ pub struct ModuleConfig {
+@@ -116,6 +117,31 @@ pub struct ModuleConfig {
  
  impl ModuleConfig {
      fn new(kind: ModuleKind, tcx: TyCtxt<'_>, no_builtins: bool) -> ModuleConfig {
@@ -612,7 +639,7 @@ index 9898c129614..aa47655e780 100644
          // If it's a regular module, use `$regular`, otherwise use `$other`.
          // `$regular` and `$other` are evaluated lazily.
          macro_rules! if_regular {
-@@ -126,7 +152,6 @@ macro_rules! if_regular {
+@@ -124,7 +150,6 @@ macro_rules! if_regular {
              };
          }
  
@@ -620,7 +647,7 @@ index 9898c129614..aa47655e780 100644
          let opt_level_and_size = if_regular!(Some(sess.opts.optimize), None);
  
          let save_temps = sess.opts.cg.save_temps;
-@@ -157,7 +182,7 @@ macro_rules! if_regular {
+@@ -155,7 +180,7 @@ macro_rules! if_regular {
              // `#![no_builtins]` is assumed to not participate in LTO and
              // instead goes on to generate object code.
              EmitObj::Bitcode
@@ -629,7 +656,7 @@ index 9898c129614..aa47655e780 100644
              EmitObj::ObjectCode(BitcodeSection::Full)
          } else {
              EmitObj::ObjectCode(BitcodeSection::None)
-@@ -354,6 +379,10 @@ pub struct CodegenContext {
+@@ -351,6 +376,10 @@ pub struct CodegenContext {
      ///
      /// Depends on [`ExtraBackendMethods::supports_parallel()`] and `-Zno_parallel_backend`.
      pub parallel: bool,
@@ -639,26 +666,8 @@ index 9898c129614..aa47655e780 100644
 +    pub offload_emit: Option<PathBuf>,
  }
  
- fn generate_thin_lto_work<B: ExtraBackendMethods>(
-@@ -397,12 +426,17 @@ fn generate_thin_lto_work<B: ExtraBackendMethods>(
- pub struct CompiledModules {
-     pub modules: Vec<CompiledModule>,
-     pub allocator_module: Option<CompiledModule>,
-+    /// CGUs whose unoptimized bitcode was written out for backend offload
-+    /// (`-Zoffload-emit`). Non-empty only in that mode, in which case `modules`
-+    /// and `allocator_module` are empty because no machine code was produced.
-+    pub offload_cgus: Vec<OffloadCgu>,
- }
- 
- enum MaybeLtoModules<B: WriteBackendMethods> {
-     NoLto {
-         modules: Vec<CompiledModule>,
-         allocator_module: Option<CompiledModule>,
-+        offload_cgus: Vec<OffloadCgu>,
-     },
-     FatLto {
-         cgcx: CodegenContext,
-@@ -794,6 +828,11 @@ pub(crate) enum WorkItemResult<B: WriteBackendMethods> {
+ fn generate_thin_lto_work<B: WriteBackendMethods>(
+@@ -771,6 +800,11 @@ pub(crate) enum WorkItemResult<B: WriteBackendMethods> {
      /// The backend has finished compiling a CGU, which now needs to go through
      /// thin LTO.
      NeedsThinLto(String, B::ModuleBuffer),
@@ -670,7 +679,7 @@ index 9898c129614..aa47655e780 100644
  }
  
  pub enum FatLtoInput<B: WriteBackendMethods> {
-@@ -802,13 +841,13 @@ pub enum FatLtoInput<B: WriteBackendMethods> {
+@@ -784,13 +818,13 @@ pub enum ThinLtoInput<B: WriteBackendMethods> {
  }
  
  /// Actual LTO type we end up choosing based on multiple factors.
@@ -686,7 +695,7 @@ index 9898c129614..aa47655e780 100644
      sess_lto: &Lto,
      linker_does_lto: bool,
      sess_crate_types: &[CrateType],
-@@ -843,6 +882,20 @@ fn execute_optimize_work_item<B: ExtraBackendMethods>(
+@@ -825,6 +859,20 @@ fn execute_optimize_work_item<B: WriteBackendMethods>(
  ) -> WorkItemResult<B> {
      let _timer = prof.generic_activity_with_arg("codegen_module_optimize", &*module.name);
  
@@ -707,16 +716,16 @@ index 9898c129614..aa47655e780 100644
      B::optimize(cgcx, prof, &shared_emitter, &mut module, &cgcx.module_config);
  
      // After we've done the initial round of optimizations we need to
-@@ -1013,7 +1066,7 @@ fn do_fat_lto<B: ExtraBackendMethods>(
-     B::codegen(cgcx, prof, &shared_emitter, module, &cgcx.module_config)
+@@ -989,7 +1037,7 @@ fn do_fat_lto<B: WriteBackendMethods>(
+     )
  }
  
--fn do_thin_lto<B: ExtraBackendMethods>(
-+pub fn do_thin_lto<B: ExtraBackendMethods>(
+-fn do_thin_lto<B: WriteBackendMethods>(
++pub fn do_thin_lto<B: WriteBackendMethods>(
      cgcx: &CodegenContext,
      prof: &SelfProfilerRef,
      shared_emitter: SharedEmitter,
-@@ -1292,6 +1345,16 @@ fn start_executing_work<B: ExtraBackendMethods>(
+@@ -1265,6 +1313,16 @@ fn start_executing_work<B: ExtraBackendMethods>(
      let exported_symbols_for_lto =
          Arc::new(lto::exported_symbols_for_lto(tcx, &each_linked_rlib_for_lto));
  
@@ -733,7 +742,7 @@ index 9898c129614..aa47655e780 100644
      // First up, convert our jobserver into a helper thread so we can use normal
      // mpsc channels to manage our messages and such.
      // After we've requested tokens then we'll, when we can,
-@@ -1346,6 +1409,7 @@ fn start_executing_work<B: ExtraBackendMethods>(
+@@ -1319,6 +1377,7 @@ fn start_executing_work<B: ExtraBackendMethods>(
          parallel: backend.supports_parallel() && !sess.opts.unstable_opts.no_parallel_backend,
          pointer_size: tcx.data_layout.pointer_size(),
          invocation_temp: sess.invocation_temp.clone(),
@@ -741,7 +750,7 @@ index 9898c129614..aa47655e780 100644
      };
  
      // This is the "main loop" of parallel work happening for parallel codegen.
-@@ -1487,6 +1551,7 @@ fn start_executing_work<B: ExtraBackendMethods>(
+@@ -1462,6 +1521,7 @@ fn start_executing_work<B: ExtraBackendMethods>(
          // This is where we collect codegen units that have gone all the way
          // through codegen and LLVM.
          let mut compiled_modules = vec![];
@@ -749,7 +758,7 @@ index 9898c129614..aa47655e780 100644
          let mut needs_fat_lto = Vec::new();
          let mut needs_thin_lto = Vec::new();
          let mut lto_import_only_modules = Vec::new();
-@@ -1526,8 +1591,21 @@ enum CodegenState {
+@@ -1501,8 +1561,21 @@ enum CodegenState {
  
          let mut llvm_start_time: Option<VerboseTimingGuard<'_>> = None;
  
@@ -773,9 +782,9 @@ index 9898c129614..aa47655e780 100644
          }
  
          // Run the message loop while there's still anything that needs message
-@@ -1739,6 +1817,9 @@ enum CodegenState {
-                             assert!(needs_fat_lto.is_empty());
-                             needs_thin_lto.push((name, thin_buffer));
+@@ -1717,6 +1790,9 @@ enum CodegenState {
+                                 buffer: SerializedModule::Local(thin_buffer),
+                             });
                          }
 +                        Ok(WorkItemResult::OffloadEmitted(cgu)) => {
 +                            offload_cgus.push(cgu);
@@ -783,15 +792,15 @@ index 9898c129614..aa47655e780 100644
                          Err(Some(WorkerFatalError)) => {
                              // Like `CodegenAborted`, wait for remaining work to finish.
                              codegen_state = Aborted;
-@@ -1823,6 +1904,7 @@ enum CodegenState {
+@@ -1809,6 +1885,7 @@ enum CodegenState {
              allocator_module: allocator_module.map(|allocator_module| {
                  B::codegen(&cgcx, &prof, &shared_emitter, allocator_module, &allocator_config)
              }),
 +            offload_cgus,
-         })
-     })
-     .expect("failed to spawn coordinator thread");
-@@ -1990,7 +2072,7 @@ pub struct SharedEmitterMain {
+         }))
+     };
+     return std::thread::Builder::new()
+@@ -1985,7 +2062,7 @@ pub struct SharedEmitterMain {
  }
  
  impl SharedEmitter {
@@ -800,7 +809,7 @@ index 9898c129614..aa47655e780 100644
          let (sender, receiver) = channel();
  
          (SharedEmitter { sender }, SharedEmitterMain { receiver })
-@@ -2038,7 +2120,7 @@ fn source_map(&self) -> Option<&SourceMap> {
+@@ -2033,7 +2110,7 @@ fn source_map(&self) -> Option<&SourceMap> {
  }
  
  impl SharedEmitterMain {
@@ -809,35 +818,23 @@ index 9898c129614..aa47655e780 100644
          loop {
              let message = if blocking {
                  match self.receiver.recv() {
-@@ -2170,9 +2252,9 @@ pub fn join(self, sess: &Session) -> (CodegenResults, FxIndexMap<WorkProductId,
- 
-         // Catch fatal errors to ensure shared_emitter_main.check() can emit the actual diagnostics
-         let compiled_modules = catch_fatal_errors(|| match maybe_lto_modules {
--            MaybeLtoModules::NoLto { modules, allocator_module } => {
-+            MaybeLtoModules::NoLto { modules, allocator_module, offload_cgus } => {
-                 drop(shared_emitter);
--                CompiledModules { modules, allocator_module }
-+                CompiledModules { modules, allocator_module, offload_cgus }
-             }
-             MaybeLtoModules::FatLto {
-                 cgcx,
-@@ -2199,6 +2281,7 @@ pub fn join(self, sess: &Session) -> (CodegenResults, FxIndexMap<WorkProductId,
-                         lto_import_only_modules,
+@@ -2191,6 +2268,7 @@ pub fn join(self, sess: &Session) -> (CompiledModules, FxIndexMap<WorkProductId,
+                         needs_fat_lto,
                      )],
                      allocator_module: None,
 +                    offload_cgus: vec![],
                  }
              }
              MaybeLtoModules::ThinLto {
-@@ -2226,6 +2309,7 @@ pub fn join(self, sess: &Session) -> (CodegenResults, FxIndexMap<WorkProductId,
-                         lto_import_only_modules,
+@@ -2216,6 +2294,7 @@ pub fn join(self, sess: &Session) -> (CompiledModules, FxIndexMap<WorkProductId,
+                         needs_thin_lto,
                      ),
                      allocator_module: None,
 +                    offload_cgus: vec![],
                  }
              }
          });
-@@ -2241,6 +2325,27 @@ pub fn join(self, sess: &Session) -> (CodegenResults, FxIndexMap<WorkProductId,
+@@ -2231,6 +2310,24 @@ pub fn join(self, sess: &Session) -> (CompiledModules, FxIndexMap<WorkProductId,
          // the backend in the same order every time to ensure that we're handing
          // out deterministic results.
          compiled_modules.modules.sort_by(|a, b| a.name.cmp(&b.name));
@@ -853,35 +850,32 @@ index 9898c129614..aa47655e780 100644
 +                &compiled_modules.offload_cgus,
 +                dir,
 +            );
-+            return (
-+                CodegenResults {
-+                    crate_info: self.crate_info,
-+                    modules: vec![],
-+                    allocator_module: None,
-+                },
-+                FxIndexMap::default(),
-+            );
++            // In emit mode no machine code was produced: `modules`/`allocator_module` are
++            // empty and `offload_cgus` carries the emitted bitcode. Return it as-is (so the
++            // rlink the driver serializes carries the CGU list) with no work products; the
++            // driver serializes the rlink and skips linking (see `rustc_interface::Linker::link`).
++            return (compiled_modules, FxIndexMap::default());
 +        }
  
          let work_products =
              copy_all_cgu_workproducts_to_incr_comp_cache_dir(sess, &compiled_modules);
 diff --git a/compiler/rustc_codegen_ssa/src/lib.rs b/compiler/rustc_codegen_ssa/src/lib.rs
-index 42a4985d023..f6f460eb6a2 100644
+index 26e506219e5..37ddb37900e 100644
 --- a/compiler/rustc_codegen_ssa/src/lib.rs
 +++ b/compiler/rustc_codegen_ssa/src/lib.rs
-@@ -340,7 +340,9 @@ pub fn deserialize_rlink(
-             return Err(CodegenErrors::CorruptFile);
-         };
-         let rustc_version = decoder.read_str();
--        if rustc_version != sess.cfg_version {
-+        let rlink_version = rustc_version.split(|c| c == '-' || c == ' ').next().unwrap_or(rustc_version);
-+        let current_version = sess.cfg_version.split(|c| c == '-' || c == ' ').next().unwrap_or(sess.cfg_version);
-+        if rlink_version != current_version {
-             return Err(CodegenErrors::RustcVersionMismatch {
-                 rustc_version: rustc_version.to_string(),
-             });
+@@ -255,6 +255,10 @@ pub struct TargetConfig {
+ pub struct CompiledModules {
+     pub modules: Vec<CompiledModule>,
+     pub allocator_module: Option<CompiledModule>,
++    /// CGUs whose unoptimized bitcode was written out for backend offload
++    /// (`-Zoffload-emit`). Non-empty only in that mode, in which case `modules`
++    /// and `allocator_module` are empty because no machine code was produced.
++    pub offload_cgus: Vec<back::offload::OffloadCgu>,
+ }
+ 
+ pub enum CodegenError {
 diff --git a/compiler/rustc_codegen_ssa/src/traits/backend.rs b/compiler/rustc_codegen_ssa/src/traits/backend.rs
-index 7ebff77710f..d148321c728 100644
+index 7b95562ddda..d2e1953d04f 100644
 --- a/compiler/rustc_codegen_ssa/src/traits/backend.rs
 +++ b/compiler/rustc_codegen_ssa/src/traits/backend.rs
 @@ -1,5 +1,6 @@
@@ -891,7 +885,7 @@ index 7ebff77710f..d148321c728 100644
  
  use rustc_ast::expand::allocator::AllocatorMethod;
  use rustc_data_structures::fx::FxIndexMap;
-@@ -134,6 +135,14 @@ fn link(
+@@ -141,6 +142,14 @@ fn link(
              self.name(),
          );
      }
@@ -907,7 +901,7 @@ index 7ebff77710f..d148321c728 100644
  
  pub trait ExtraBackendMethods:
 diff --git a/compiler/rustc_driver_impl/src/lib.rs b/compiler/rustc_driver_impl/src/lib.rs
-index 38a11b427c1..d53e3f2288c 100644
+index bb9c63d2243..cd2bb44653c 100644
 --- a/compiler/rustc_driver_impl/src/lib.rs
 +++ b/compiler/rustc_driver_impl/src/lib.rs
 @@ -268,6 +268,13 @@ pub fn run_compiler(at_args: &[String], callbacks: &mut (dyn Callbacks + Send))
@@ -924,11 +918,24 @@ index 38a11b427c1..d53e3f2288c 100644
          // Parse the crate root source code (doesn't parse submodules yet)
          // Everything else is parsed during macro expansion.
          let mut krate = passes::parse(sess);
+diff --git a/compiler/rustc_interface/src/passes.rs b/compiler/rustc_interface/src/passes.rs
+index ab61ba63572..8b9b68c73c6 100644
+--- a/compiler/rustc_interface/src/passes.rs
++++ b/compiler/rustc_interface/src/passes.rs
+@@ -1295,7 +1295,7 @@ pub(crate) fn start_codegen<'tcx>(
+             tcx.sess.dcx().abort_if_errors();
+ 
+             // Linker::link will skip join_codegen in case of a CodegenResults Any value.
+-            Box::new(CompiledModules { modules: vec![], allocator_module: None })
++            Box::new(CompiledModules { modules: vec![], allocator_module: None, offload_cgus: vec![] })
+         } else {
+             codegen_backend.codegen_crate(tcx, &crate_info)
+         }
 diff --git a/compiler/rustc_interface/src/queries.rs b/compiler/rustc_interface/src/queries.rs
-index 3799485077e..8bd942ace29 100644
+index 170393f3b81..6fc4639fb2e 100644
 --- a/compiler/rustc_interface/src/queries.rs
 +++ b/compiler/rustc_interface/src/queries.rs
-@@ -73,6 +73,26 @@ pub fn link(self, sess: &Session, codegen_backend: &dyn CodegenBackend) {
+@@ -84,6 +84,27 @@ pub fn link(self, sess: &Session, codegen_backend: &dyn CodegenBackend) {
  
          sess.dcx().abort_if_errors();
  
@@ -939,10 +946,11 @@ index 3799485077e..8bd942ace29 100644
 +        // Then stop: optimization, machine-code generation and linking happen elsewhere.
 +        if let Some(dir) = &sess.opts.unstable_opts.offload_emit {
 +            let rlink_file = dir.join("offload.rlink");
-+            CodegenResults::serialize_rlink(
++            CompiledModules::serialize_rlink(
 +                sess,
 +                &rlink_file,
-+                &codegen_results,
++                &compiled_modules,
++                &self.crate_info,
 +                &self.metadata,
 +                &self.output_filenames,
 +            )
@@ -955,11 +963,24 @@ index 3799485077e..8bd942ace29 100644
          let _timer = sess.timer("link");
  
          sess.time("serialize_work_products", || {
+diff --git a/compiler/rustc_interface/src/util.rs b/compiler/rustc_interface/src/util.rs
+index 24b23cc4199..c54a44447f8 100644
+--- a/compiler/rustc_interface/src/util.rs
++++ b/compiler/rustc_interface/src/util.rs
+@@ -407,7 +407,7 @@ fn target_cpu(&self, _sess: &Session) -> String {
+     }
+ 
+     fn codegen_crate<'tcx>(&self, _tcx: TyCtxt<'tcx>, _crate_info: &CrateInfo) -> Box<dyn Any> {
+-        Box::new(CompiledModules { modules: vec![], allocator_module: None })
++        Box::new(CompiledModules { modules: vec![], allocator_module: None, offload_cgus: vec![] })
+     }
+ 
+     fn join_codegen(
 diff --git a/compiler/rustc_session/src/options.rs b/compiler/rustc_session/src/options.rs
-index 74b3aa11d0d..c627824d559 100644
+index 027a7045791..a44eba1ed57 100644
 --- a/compiler/rustc_session/src/options.rs
 +++ b/compiler/rustc_session/src/options.rs
-@@ -2519,6 +2519,18 @@ pub(crate) fn parse_align(slot: &mut Option<Align>, v: Option<&str>) -> bool {
+@@ -2551,6 +2551,18 @@ pub(crate) fn parse_assert_incr_state(
          Mandatory setting:
          `=Enable`
          Currently the only option available"),
@@ -979,5 +1000,5 @@ index 74b3aa11d0d..c627824d559 100644
          "behavior of std::io::ErrorKind::BrokenPipe (SIGPIPE)"),
      osx_rpath_install_name: bool = (false, parse_bool, [TRACKED],
 -- 
-2.55.0
+2.53.0
 
