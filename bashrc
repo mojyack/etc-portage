@@ -24,4 +24,6 @@ pre_pkg_setup() {
     echo "DEBUG: CXXFLAGS $CXXFLAGS"
     echo "DEBUG: LDFLAGS $LDFLAGS"
     echo "DEBUG: RUSTFLAGS $RUSTFLAGS"
+
+    export SETUPTOOLS_SCM_PRETEND_VERSION=${PV}
 }
