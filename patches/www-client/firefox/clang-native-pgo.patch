@@ -1,0 +1,40 @@
+diff --git a/build/moz.configure/lto-pgo.configure b/build/moz.configure/lto-pgo.configure
+index df2b0bf..a57c100 100644
+--- a/build/moz.configure/lto-pgo.configure
++++ b/build/moz.configure/lto-pgo.configure
+@@ -114,7 +114,7 @@ def orderfile_path(profile_use, path, profdata, profdata_order, build_env):
+ 
+ 
+ pgo_temporal = c_compiler.try_compile(
+-    flags=["-fprofile-generate", "-mllvm", "-pgo-temporal-instrumentation"],
++    flags=["-fprofile-instr-generate", "-mllvm", "-pgo-temporal-instrumentation"],
+     check_msg="whether the C compiler supports temporal instrumentation",
+     when=enable_profile_generate & ~pgo_cg_sort,
+ )
+@@ -153,7 +153,7 @@ def pgo_flags(
+             prefix = "/clang:"
+             gen_ldflags = None
+         else:
+-            gen_ldflags = ["-fprofile-generate"]
++            gen_ldflags = ["-fprofile-instr-generate"]
+ 
+         use_ldflags = []
+         if orderfile:
+@@ -174,7 +174,7 @@ def pgo_flags(
+             if use_ldflags:
+                 log.info("Activating PGO-based orderfile")
+ 
+-        gen_cflags = [prefix + "-fprofile-generate"]
++        gen_cflags = [prefix + "-fprofile-instr-generate"]
+ 
+         if pgo_temporal:
+             gen_cflags += ["-mllvm", "-pgo-temporal-instrumentation"]
+@@ -189,7 +189,7 @@ def pgo_flags(
+             gen_cflags=gen_cflags,
+             gen_ldflags=gen_ldflags,
+             use_cflags=[
+-                prefix + "-fprofile-use=%s" % profdata,
++                prefix + "-fprofile-instr-use=%s" % profdata,
+                 # Some error messages about mismatched profile data
+                 # come in via -Wbackend-plugin, so disable those too.
+                 "-Wno-error=backend-plugin",
